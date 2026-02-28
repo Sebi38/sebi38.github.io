@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0f1e;font-family:'Outfit',sans-serif;color:#fff;min-height:100vh}
@@ -23,13 +25,41 @@ table{font-family:'Outfit',sans-serif}
 <script type="text/babel">
 const {useState,useEffect,useMemo}=React;
 
+// ── Firebase ──────────────────────────────────────────────────────────────────
+const firebaseConfig={apiKey:"AIzaSyDnulrGY8quwJqgADAldowBMigULax7_TY",authDomain:"sebi-soccer-38.firebaseapp.com",databaseURL:"https://sebi-soccer-38-default-rtdb.firebaseio.com",projectId:"sebi-soccer-38",storageBucket:"sebi-soccer-38.firebasestorage.app",messagingSenderId:"465168408261",appId:"1:465168408261:web:49ce5caf5df95939589aac"};
+firebase.initializeApp(firebaseConfig);
+window._fbdb=firebase.database();
+// ─────────────────────────────────────────────────────────────────────────────
+
 const PASSWORD="SebiSoccer2026";
 const CATS=["Shooting","Dribbling / Ball Control","Passing","Defending","Positioning / Tactical","Fitness / Speed","Mental Game"];
 const POS=["GK","CB","LB","RB","CDM","CM","CAM","LM","RM","LW","RW","ST","CF"];
 const SK={games:"seb38-games",highlights:"seb38-highlights",training:"seb38-training",trainRes:"seb38-train-res",journal:"seb38-journal",stats:"seb38-stats",nutrition:"seb38-nutrition",nutrRes:"seb38-nutr-res",auth:"seb38-auth"};
+const SK_TO_FB={[SK.games]:"games",[SK.highlights]:"highlights",[SK.training]:"training",[SK.trainRes]:"trainRes",[SK.journal]:"journal",[SK.stats]:"stats",[SK.nutrition]:"nutrition",[SK.nutrRes]:"nutrRes"};
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function ld(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch{return null}}
-function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.error(e)}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.error(e)}if(window._fbdb){const fk=SK_TO_FB[k];if(fk){const fv=Array.isArray(v)?v.reduce((a,i)=>{a[i.id]=i;return a},{}):v;window._fbdb.ref('seb38/data/'+fk).set(fv).catch(console.error);}}}
+function fbSnapToArray(snap){const v=snap.val();if(!v)return[];return Object.entries(v).map(([id,item])=>({...item,id}));}
+function arrayToFbObj(arr){return arr.reduce((a,i)=>{a[i.id]=i;return a},{});}
+async function runSeedsIfNeeded(db){
+  const seeds=(await db.ref('seb38/seeds').once('value')).val()||{};
+  if(!seeds.spring26){const ex=fbSnapToArray(await db.ref('seb38/data/stats').once('value'));await db.ref('seb38/data/stats').set(arrayToFbObj([...SPRING26,...ex]));await db.ref('seb38/seeds/spring26').set(true);}
+  if(!seeds['spring26-j']){const ex=fbSnapToArray(await db.ref('seb38/data/journal').once('value'));await db.ref('seb38/data/journal').set(arrayToFbObj([...SPRING26_J,...ex]));await db.ref('seb38/seeds/spring26-j').set(true);}
+  if(!seeds['spring26-link']){const jArr=fbSnapToArray(await db.ref('seb38/data/journal').once('value'));const lm={"spj26-1":"sp26-1","spj26-2":"sp26-2","spj26-3":"sp26-3","spj26-4":"sp26-4","spj26-5":"sp26-5","spj26-6":"sp26-6","spj26-7":"sp26-7","spj26-8":"sp26-8","spj26-9":"sp26-9"};await db.ref('seb38/data/journal').set(arrayToFbObj(jArr.map(e=>lm[e.id]?{...e,statId:lm[e.id]}:e)));await db.ref('seb38/seeds/spring26-link').set(true);}
+}
+async function loadFirebaseToLocal(){
+  const db=window._fbdb;
+  const existSnap=await db.ref('seb38/data').once('value');
+  if(!existSnap.val()){
+    const mig={};const nm={games:SK.games,highlights:SK.highlights,training:SK.training,trainRes:SK.trainRes,journal:SK.journal,stats:SK.stats,nutrition:SK.nutrition,nutrRes:SK.nutrRes};
+    Object.entries(nm).forEach(([fk,sk])=>{const loc=ld(sk);if(loc&&Array.isArray(loc)&&loc.length>0)mig[fk]=arrayToFbObj(loc);});
+    if(Object.keys(mig).length>0)await db.ref('seb38/data').set(mig);
+  }
+  await runSeedsIfNeeded(db);
+  const data=(await db.ref('seb38/data').once('value')).val()||{};
+  const nm={games:SK.games,highlights:SK.highlights,training:SK.training,trainRes:SK.trainRes,journal:SK.journal,stats:SK.stats,nutrition:SK.nutrition,nutrRes:SK.nutrRes};
+  Object.entries(nm).forEach(([fk,sk])=>{const node=data[fk];if(node){const arr=Object.entries(node).map(([id,val])=>({...val,id}));localStorage.setItem(sk,JSON.stringify(arr));}});
+}
 
 // One-time seed: spring 2026 schedule
 const SPRING26=[
@@ -43,7 +73,6 @@ const SPRING26=[
   {id:"sp26-8",date:"2026-05-02",opponent:"West Virginia Soccer",position:"CM",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Limerick Field"},
   {id:"sp26-9",date:"2026-05-03",opponent:"Beadling SC",position:"CM",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Witter Field"},
 ];
-if(!ld("seb38-spring26")){const ex=ld(SK.stats)||[];sv(SK.stats,[...SPRING26,...ex]);sv("seb38-spring26",true);}
 
 const SPRING26_J=[
   {id:"spj26-1",date:"2026-02-22",opponent:"Sporting Athletic Club",location:"Chase Fields · Wilmington, DE",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
@@ -56,8 +85,6 @@ const SPRING26_J=[
   {id:"spj26-8",date:"2026-05-02",opponent:"West Virginia Soccer",location:"Limerick Field",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
   {id:"spj26-9",date:"2026-05-03",opponent:"Beadling SC",location:"Witter Field",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
 ];
-if(!ld("seb38-spring26-j")){const ex=ld(SK.journal)||[];sv(SK.journal,[...SPRING26_J,...ex]);sv("seb38-spring26-j",true);}
-if(!ld("seb38-spring26-link")){const jj=ld(SK.journal)||[];const lm={"spj26-1":"sp26-1","spj26-2":"sp26-2","spj26-3":"sp26-3","spj26-4":"sp26-4","spj26-5":"sp26-5","spj26-6":"sp26-6","spj26-7":"sp26-7","spj26-8":"sp26-8","spj26-9":"sp26-9"};sv(SK.journal,jj.map(e=>lm[e.id]?{...e,statId:lm[e.id]}:e));sv("seb38-spring26-link",true);}
 
 const IS={width:"100%",padding:"12px 14px",fontSize:14,background:"#0a0f1e",border:"1px solid #1e2d50",borderRadius:10,color:"#fff",outline:"none",boxSizing:"border-box",fontFamily:"'Outfit',sans-serif"};
 const LS={color:"#8892a8",fontSize:13,fontWeight:600,marginBottom:6,display:"block"};
@@ -495,8 +522,16 @@ function Nutrition(){
 function App(){
   const[authed,setA]=useState(false);const[page,setP]=useState("home");
   const[statsD,setSD]=useState([]);const[journalD,setJD]=useState([]);
-  useEffect(()=>{if(authed){setSD(ld(SK.stats)||[]);setJD(ld(SK.journal)||[])}},[authed,page]);
-  if(!authed)return<PasswordGate onAuth={()=>setA(true)}/>;
+  const[dbReady,setDbR]=useState(false);
+  const handleAuth=async()=>{
+    setA(true);
+    try{await loadFirebaseToLocal();}catch(e){console.error("Firebase load failed:",e);}
+    setSD(ld(SK.stats)||[]);setJD(ld(SK.journal)||[]);
+    setDbR(true);
+  };
+  useEffect(()=>{if(authed&&dbReady){setSD(ld(SK.stats)||[]);setJD(ld(SK.journal)||[])}},[authed,dbReady,page]);
+  if(!authed)return<PasswordGate onAuth={handleAuth}/>;
+  if(!dbReady)return(<div style={{minHeight:"100vh",background:"#0a0f1e",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}><div style={{fontSize:48}}>⚽</div><p style={{color:"#5a6a8a",fontSize:16,fontFamily:"'Outfit',sans-serif"}}>Loading data...</p></div>);
   return(<div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
     <Nav active={page} setActive={setP}/>
     {page==="home"&&<Home stats={statsD} journal={journalD}/>}
