@@ -46,6 +46,7 @@ async function runSeedsIfNeeded(db){
   if(!seeds.spring26){const ex=fbSnapToArray(await db.ref('seb38/data/stats').once('value'));await db.ref('seb38/data/stats').set(arrayToFbObj([...SPRING26,...ex]));await db.ref('seb38/seeds/spring26').set(true);}
   if(!seeds['spring26-j']){const ex=fbSnapToArray(await db.ref('seb38/data/journal').once('value'));await db.ref('seb38/data/journal').set(arrayToFbObj([...SPRING26_J,...ex]));await db.ref('seb38/seeds/spring26-j').set(true);}
   if(!seeds['spring26-link']){const jArr=fbSnapToArray(await db.ref('seb38/data/journal').once('value'));const lm={"spj26-1":"sp26-1","spj26-2":"sp26-2","spj26-3":"sp26-3","spj26-4":"sp26-4","spj26-5":"sp26-5","spj26-6":"sp26-6","spj26-7":"sp26-7","spj26-8":"sp26-8","spj26-9":"sp26-9"};await db.ref('seb38/data/journal').set(arrayToFbObj(jArr.map(e=>lm[e.id]?{...e,statId:lm[e.id]}:e)));await db.ref('seb38/seeds/spring26-link').set(true);}
+  if(!seeds.fall25){const ex=fbSnapToArray(await db.ref('seb38/data/stats').once('value'));await db.ref('seb38/data/stats').set(arrayToFbObj([...FALL25,...ex]));await db.ref('seb38/seeds/fall25').set(true);}
 }
 async function loadFirebaseToLocal(){
   const db=window._fbdb;
@@ -84,6 +85,26 @@ const SPRING26_J=[
   {id:"spj26-7",date:"2026-04-18",opponent:"Keystone FC",location:"Bermudian Springs Middle School",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
   {id:"spj26-8",date:"2026-05-02",opponent:"West Virginia Soccer",location:"Limerick Field",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
   {id:"spj26-9",date:"2026-05-03",opponent:"Beadling SC",location:"Witter Field",surface:"grass",position:"CM",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
+];
+
+// One-time seed: fall 2025 schedule (regular season + MLSN Fest)
+const FALL25=[
+  {id:"fa25-1",date:"2025-09-06",opponent:"Real Futbal Club",position:"CB",minutes:72,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"L",scoreFor:1,scoreAgainst:2,notes:"Witter Field · Alexandria, VA"},
+  {id:"fa25-2",date:"2025-09-13",opponent:"Achilles",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:2,scoreAgainst:0,notes:"Maryland Soccerplex"},
+  {id:"fa25-3",date:"2025-09-27",opponent:"Springfield",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:2,scoreAgainst:1,notes:"Springfield HS · Springfield, VA"},
+  {id:"fa25-4",date:"2025-10-04",opponent:"Baltimore Armor",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"L",scoreFor:1,scoreAgainst:2,notes:"Witter Field · Alexandria, VA"},
+  {id:"fa25-5",date:"2025-10-19",opponent:"Achilles",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:5,scoreAgainst:0,notes:"Witter Field · Alexandria, VA"},
+  {id:"fa25-6",date:"2025-10-25",opponent:"NVA",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"L",scoreFor:0,scoreAgainst:3,notes:"Riverside HS"},
+  {id:"fa25-7",date:"2025-10-26",opponent:"Cedar Stars",position:"CB",minutes:70,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"L",scoreFor:3,scoreAgainst:4,notes:"Witter Field · Alexandria, VA"},
+  {id:"fa25-8",date:"2025-11-01",opponent:"FC Delco",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:2,scoreAgainst:0,notes:"Brenman Park"},
+  {id:"fa25-9",date:"2025-11-08",opponent:"PDA",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"New Jersey"},
+  {id:"fa25-10",date:"2025-11-09",opponent:"Unknown",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"New Jersey"},
+  {id:"fa25-11",date:"2025-11-15",opponent:"Beadling",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:4,scoreAgainst:2,notes:"Pittsburgh (indoor)"},
+  {id:"fa25-12",date:"2025-11-22",opponent:"Philly Union",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"L",scoreFor:0,scoreAgainst:3,notes:"Limerick Field"},
+  {id:"fa25-13",date:"2025-12-11",opponent:"Sacramento FC",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:2,scoreAgainst:0,notes:"Scottsdale · MLSN Fest"},
+  {id:"fa25-14",date:"2025-12-12",opponent:"Albion SC Colorado",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"W",scoreFor:2,scoreAgainst:1,notes:"Scottsdale · MLSN Fest"},
+  {id:"fa25-15",date:"2025-12-13",opponent:"RSL Arizona",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"D",scoreFor:1,scoreAgainst:1,notes:"Scottsdale · MLSN Fest"},
+  {id:"fa25-16",date:"2025-12-13",opponent:"Michigan Jaguars",position:"CB",minutes:75,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Scottsdale · MLSN Fest (FINAL)"},
 ];
 
 const IS={width:"100%",padding:"12px 14px",fontSize:14,background:"#0a0f1e",border:"1px solid #1e2d50",borderRadius:10,color:"#fff",outline:"none",boxSizing:"border-box",fontFamily:"'Outfit',sans-serif"};
@@ -278,19 +299,19 @@ function Training(){
 function Journal(){
   const[entries,setE]=useState(()=>ld(SK.journal)||[]);const[showAdd,setSA]=useState(false);
   const[expId,setExp]=useState(null);const[search,setSe]=useState("");
-  const ef={date:"",opponent:"",location:"",surface:"grass",position:"CM",result:"—",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",statId:null,wentWell:"",toImprove:"",rating:5,freeform:"",takaLink:"",veoLink:""};
+  const ef={date:"",opponent:"",location:"",surface:"grass",position:"CM",result:"—",scoreFor:"",scoreAgainst:"",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",statId:null,wentWell:"",toImprove:"",rating:5,freeform:"",takaLink:"",veoLink:""};
   const[form,setF]=useState(ef);const[editId,setEI]=useState(null);
   const persist=u=>{setE(u);sv(SK.journal,u)};
   const doSave=()=>{
     if(!form.date||!form.opponent)return;
-    const p={...form,minutes:parseInt(form.minutes)||0,goals:parseInt(form.goals)||0,assists:parseInt(form.assists)||0,shots:parseInt(form.shots)||0,sot:parseInt(form.sot)||0,passes:parseInt(form.passes)||0,tackles:parseInt(form.tackles)||0,takaPos:form.takaPos!==""?parseInt(form.takaPos)||0:"",takaNeg:form.takaNeg!==""?parseInt(form.takaNeg)||0:""};
+    const p={...form,scoreFor:form.scoreFor!==""?parseInt(form.scoreFor)||0:"",scoreAgainst:form.scoreAgainst!==""?parseInt(form.scoreAgainst)||0:"",minutes:parseInt(form.minutes)||0,goals:parseInt(form.goals)||0,assists:parseInt(form.assists)||0,shots:parseInt(form.shots)||0,sot:parseInt(form.sot)||0,passes:parseInt(form.passes)||0,tackles:parseInt(form.tackles)||0,takaPos:form.takaPos!==""?parseInt(form.takaPos)||0:"",takaNeg:form.takaNeg!==""?parseInt(form.takaNeg)||0:""};
     const allStats=ld(SK.stats)||[];let sid=p.statId;
-    const statEntry={date:p.date,opponent:p.opponent,position:p.position,minutes:p.minutes,goals:p.goals,assists:p.assists,shots:p.shots,sot:p.sot,passes:p.passes,tackles:p.tackles,result:p.result,notes:p.location||"",takaPos:p.takaPos,takaNeg:p.takaNeg};
+    const statEntry={date:p.date,opponent:p.opponent,position:p.position,minutes:p.minutes,goals:p.goals,assists:p.assists,shots:p.shots,sot:p.sot,passes:p.passes,tackles:p.tackles,result:p.result,scoreFor:p.scoreFor,scoreAgainst:p.scoreAgainst,notes:p.location||"",takaPos:p.takaPos,takaNeg:p.takaNeg};
     if(sid){sv(SK.stats,allStats.map(s=>s.id===sid?{...s,...statEntry}:s))}
     else{sid=gid();p.statId=sid;sv(SK.stats,[{...statEntry,id:sid},...allStats])}
     let u;if(editId){u=entries.map(e=>e.id===editId?{...p,id:editId}:e)}else{u=[{...p,id:gid()},...entries]}
     persist(u);setF(ef);setSA(false);setEI(null)};
-  const edit=e=>{setF({date:e.date,opponent:e.opponent,location:e.location||"",surface:e.surface||"grass",position:e.position||"CM",result:e.result||"—",minutes:e.minutes||0,goals:e.goals||0,assists:e.assists||0,shots:e.shots||0,sot:e.sot||0,passes:e.passes||0,tackles:e.tackles||0,takaPos:e.takaPos!=null?e.takaPos:"",takaNeg:e.takaNeg!=null?e.takaNeg:"",statId:e.statId||null,wentWell:e.wentWell||"",toImprove:e.toImprove||"",rating:e.rating||5,freeform:e.freeform||"",takaLink:e.takaLink||e.filmLink||"",veoLink:e.veoLink||""});setEI(e.id);setSA(true)};
+  const edit=e=>{setF({date:e.date,opponent:e.opponent,location:e.location||"",surface:e.surface||"grass",position:e.position||"CM",result:e.result||"—",scoreFor:e.scoreFor!=null?e.scoreFor:"",scoreAgainst:e.scoreAgainst!=null?e.scoreAgainst:"",minutes:e.minutes||0,goals:e.goals||0,assists:e.assists||0,shots:e.shots||0,sot:e.sot||0,passes:e.passes||0,tackles:e.tackles||0,takaPos:e.takaPos!=null?e.takaPos:"",takaNeg:e.takaNeg!=null?e.takaNeg:"",statId:e.statId||null,wentWell:e.wentWell||"",toImprove:e.toImprove||"",rating:e.rating||5,freeform:e.freeform||"",takaLink:e.takaLink||e.filmLink||"",veoLink:e.veoLink||""});setEI(e.id);setSA(true)};
   const del=id=>{const e=entries.find(x=>x.id===id);if(e?.statId){sv(SK.stats,(ld(SK.stats)||[]).filter(s=>s.id!==e.statId))}persist(entries.filter(x=>x.id!==id))};
   const filtered=useMemo(()=>{if(!search.trim())return entries;const s=search.toLowerCase();return entries.filter(e=>e.opponent.toLowerCase().includes(s)||(e.location||"").toLowerCase().includes(s)||e.date.includes(s)||(e.position||"").toLowerCase().includes(s))},[entries,search]);
   const rRC={W:"#2ecc71",L:"#e63946",D:"#f39c12"};
@@ -307,7 +328,7 @@ function Journal(){
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{color:"#fff",fontWeight:700,fontSize:15}}>vs {e.opponent}</span>
-                {e.result&&e.result!=="—"&&<span style={{color:rRC[e.result],fontWeight:700,background:rRC[e.result]+"22",padding:"1px 8px",borderRadius:5,fontSize:12}}>{e.result}</span>}
+                {e.result&&e.result!=="—"&&<span style={{color:rRC[e.result],fontWeight:700,background:rRC[e.result]+"22",padding:"1px 8px",borderRadius:5,fontSize:12}}>{e.result}{(e.scoreFor!==""&&e.scoreFor!=null&&e.scoreAgainst!==""&&e.scoreAgainst!=null)?" "+e.scoreFor+"-"+e.scoreAgainst:""}</span>}
               </div>
               <div style={{color:"#5a6a8a",fontSize:13,marginTop:2}}>{e.date} · {e.location} · {e.surface==="turf"?"🏟 Turf":"🌱 Grass"}{e.position&&<span> · <span style={{color:"#4a7ccc"}}>{e.position}</span></span>}{(e.goals>0||e.assists>0)&&<span style={{color:"#e63946"}}> · {e.goals}G {e.assists}A</span>}</div>
             </div>
@@ -340,13 +361,16 @@ function Journal(){
           <div><label style={LS}>Surface</label><select value={form.surface} onChange={e=>setF({...form,surface:e.target.value})} style={IS}><option value="grass">🌱 Grass</option><option value="turf">🏟 Turf</option></select></div>
           <div><label style={LS}>Position</label><select value={form.position} onChange={e=>setF({...form,position:e.target.value})} style={IS}>{POS.map(p=><option key={p} value={p}>{p}</option>)}</select></div></div>
         <div style={{color:"#4a7ccc",fontSize:11,fontWeight:700,letterSpacing:2,paddingBottom:6,borderBottom:"1px solid #1a2540",marginTop:4}}>GAME STATS</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
           <div><label style={LS}>Result</label><select value={form.result} onChange={e=>setF({...form,result:e.target.value})} style={IS}><option value="—">— Upcoming</option><option value="W">W – Win</option><option value="D">D – Draw</option><option value="L">L – Loss</option></select></div>
+          <div><label style={LS}>Score For</label><input type="number" min="0" value={form.scoreFor} onChange={e=>setF({...form,scoreFor:e.target.value})} placeholder="Our goals" style={IS}/></div>
+          <div><label style={LS}>Score Against</label><input type="number" min="0" value={form.scoreAgainst} onChange={e=>setF({...form,scoreAgainst:e.target.value})} placeholder="Their goals" style={IS}/></div></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
           <div><label style={LS}>Minutes</label><input type="number" min="0" max="120" value={form.minutes} onChange={e=>setF({...form,minutes:e.target.value})} style={IS}/></div>
           <div><label style={LS}>Goals</label><input type="number" min="0" value={form.goals} onChange={e=>setF({...form,goals:e.target.value})} style={IS}/></div>
-          <div><label style={LS}>Assists</label><input type="number" min="0" value={form.assists} onChange={e=>setF({...form,assists:e.target.value})} style={IS}/></div></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
-          <div><label style={LS}>Shots</label><input type="number" min="0" value={form.shots} onChange={e=>setF({...form,shots:e.target.value})} style={IS}/></div>
+          <div><label style={LS}>Assists</label><input type="number" min="0" value={form.assists} onChange={e=>setF({...form,assists:e.target.value})} style={IS}/></div>
+          <div><label style={LS}>Shots</label><input type="number" min="0" value={form.shots} onChange={e=>setF({...form,shots:e.target.value})} style={IS}/></div></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
           <div><label style={LS}>SOT</label><input type="number" min="0" value={form.sot} onChange={e=>setF({...form,sot:e.target.value})} style={IS}/></div>
           <div><label style={LS}>Passes</label><input type="number" min="0" value={form.passes} onChange={e=>setF({...form,passes:e.target.value})} style={IS}/></div>
           <div><label style={LS}>Tackles</label><input type="number" min="0" value={form.tackles} onChange={e=>setF({...form,tackles:e.target.value})} style={IS}/></div></div>
@@ -368,15 +392,16 @@ function Journal(){
 }
 
 function Stats(){
-  const[stats,setStats]=useState(()=>ld(SK.stats)||[]);const[showAdd,setSA]=useState(false);const[search,setSe]=useState("");
-  const ef={date:"",opponent:"",position:"CM",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",result:"W",notes:""};
+  const[stats,setStats]=useState(()=>ld(SK.stats)||[]);const[showAdd,setSA]=useState(false);const[search,setSe]=useState("");const[season,setSeason]=useState("all");
+  const ef={date:"",opponent:"",position:"CM",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",result:"W",scoreFor:"",scoreAgainst:"",notes:""};
   const[form,setF]=useState(ef);const[editId,setEI]=useState(null);
   const persist=u=>{setStats(u);sv(SK.stats,u)};
-  const doSave=()=>{if(!form.date||!form.opponent)return;const p={...form,minutes:parseInt(form.minutes)||0,goals:parseInt(form.goals)||0,assists:parseInt(form.assists)||0,shots:parseInt(form.shots)||0,sot:parseInt(form.sot)||0,passes:parseInt(form.passes)||0,tackles:parseInt(form.tackles)||0,takaPos:form.takaPos!==""?parseInt(form.takaPos)||0:"",takaNeg:form.takaNeg!==""?parseInt(form.takaNeg)||0:""};let u;if(editId){u=stats.map(s=>s.id===editId?{...p,id:editId}:s)}else{u=[{...p,id:gid()},...stats]}persist(u);setF(ef);setSA(false);setEI(null)};
-  const edit=s=>{setF({date:s.date,opponent:s.opponent,position:s.position||"CM",minutes:s.minutes,goals:s.goals,assists:s.assists,shots:s.shots||0,sot:s.sot||0,passes:s.passes||0,tackles:s.tackles||0,takaPos:s.takaPos!=null?s.takaPos:"",takaNeg:s.takaNeg!=null?s.takaNeg:"",result:s.result||"W",notes:s.notes||""});setEI(s.id);setSA(true)};
+  const doSave=()=>{if(!form.date||!form.opponent)return;const p={...form,scoreFor:form.scoreFor!==""?parseInt(form.scoreFor)||0:"",scoreAgainst:form.scoreAgainst!==""?parseInt(form.scoreAgainst)||0:"",minutes:parseInt(form.minutes)||0,goals:parseInt(form.goals)||0,assists:parseInt(form.assists)||0,shots:parseInt(form.shots)||0,sot:parseInt(form.sot)||0,passes:parseInt(form.passes)||0,tackles:parseInt(form.tackles)||0,takaPos:form.takaPos!==""?parseInt(form.takaPos)||0:"",takaNeg:form.takaNeg!==""?parseInt(form.takaNeg)||0:""};let u;if(editId){u=stats.map(s=>s.id===editId?{...p,id:editId}:s)}else{u=[{...p,id:gid()},...stats]}persist(u);setF(ef);setSA(false);setEI(null)};
+  const edit=s=>{setF({date:s.date,opponent:s.opponent,position:s.position||"CM",minutes:s.minutes,goals:s.goals,assists:s.assists,shots:s.shots||0,sot:s.sot||0,passes:s.passes||0,tackles:s.tackles||0,takaPos:s.takaPos!=null?s.takaPos:"",takaNeg:s.takaNeg!=null?s.takaNeg:"",result:s.result||"W",scoreFor:s.scoreFor!=null?s.scoreFor:"",scoreAgainst:s.scoreAgainst!=null?s.scoreAgainst:"",notes:s.notes||""});setEI(s.id);setSA(true)};
   const del=id=>persist(stats.filter(s=>s.id!==id));
-  const filtered=useMemo(()=>{if(!search.trim())return stats;const s=search.toLowerCase();return stats.filter(st=>st.opponent.toLowerCase().includes(s)||st.date.includes(s))},[stats,search]);
-  const tot=useMemo(()=>({g:stats.length,go:stats.reduce((s,g)=>s+g.goals,0),a:stats.reduce((s,g)=>s+g.assists,0),m:stats.reduce((s,g)=>s+g.minutes,0),sh:stats.reduce((s,g)=>s+(g.shots||0),0),so:stats.reduce((s,g)=>s+(g.sot||0),0),w:stats.filter(g=>g.result==="W").length,l:stats.filter(g=>g.result==="L").length,d:stats.filter(g=>g.result==="D").length}),[stats]);
+  const seasonStats=useMemo(()=>{if(season==="all")return stats;if(season==="fa25")return stats.filter(s=>s.id.startsWith("fa25-"));return stats.filter(s=>s.id.startsWith("sp26-"))},[stats,season]);
+  const filtered=useMemo(()=>{if(!search.trim())return seasonStats;const s=search.toLowerCase();return seasonStats.filter(st=>st.opponent.toLowerCase().includes(s)||st.date.includes(s))},[seasonStats,search]);
+  const tot=useMemo(()=>({g:seasonStats.length,go:seasonStats.reduce((s,g)=>s+g.goals,0),a:seasonStats.reduce((s,g)=>s+g.assists,0),m:seasonStats.reduce((s,g)=>s+g.minutes,0),sh:seasonStats.reduce((s,g)=>s+(g.shots||0),0),so:seasonStats.reduce((s,g)=>s+(g.sot||0),0),w:seasonStats.filter(g=>g.result==="W").length,l:seasonStats.filter(g=>g.result==="L").length,d:seasonStats.filter(g=>g.result==="D").length}),[seasonStats]);
   const rcol={W:"#2ecc71",L:"#e63946",D:"#f39c12"};
   return(<div style={{padding:"40px 24px",maxWidth:960,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
@@ -386,16 +411,22 @@ function Stats(){
       {[{v:tot.g,l:"Games",c:"#4a7ccc"},{v:tot.go,l:"Goals",c:"#e63946"},{v:tot.a,l:"Assists",c:"#2ecc71"},{v:tot.m,l:"Minutes",c:"#f39c12"},{v:tot.w+"-"+tot.d+"-"+tot.l,l:"W-D-L",c:"#9b59b6"},{v:tot.sh>0?Math.round((tot.so/tot.sh)*100)+"%":"—",l:"Shot Acc",c:"#e67e22"}].map((s,i)=>
         <div key={i} style={{...CardS,padding:"16px 10px",textAlign:"center"}}><div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:s.c}}>{s.v}</div><div style={{color:"#5a6a8a",fontSize:11,fontWeight:600,letterSpacing:1,marginTop:2}}>{s.l}</div></div>)}
     </div>}
+    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+      <Pill label="All" active={season==="all"} onClick={()=>setSeason("all")}/>
+      <Pill label="Fall '25" active={season==="fa25"} onClick={()=>setSeason("fa25")}/>
+      <Pill label="Spring '26" active={season==="sp26"} onClick={()=>setSeason("sp26")}/>
+    </div>
     <div style={{marginBottom:24}}><SB value={search} onChange={setSe} placeholder="Search opponent or date..."/></div>
     {filtered.length===0?<Empty icon="📊" text={search?"No matching games.":"No stats yet. Log your first game!"}/>:
       <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
         <thead><tr style={{borderBottom:"2px solid #1e2d50"}}>
-          {["Date","Opponent","Result","Pos","Min","G","A","Sh","SOT","Pass","Tkl","T+","T−",""].map((h,i)=><th key={i} style={{color:h==="T+"?"#2ecc71":h==="T−"?"#e63946":"#5a6a8a",fontWeight:700,padding:"10px 8px",textAlign:"left",whiteSpace:"nowrap",fontSize:11,letterSpacing:1}}>{h}</th>)}
+          {["Date","Opponent","Result","Score","Pos","Min","G","A","Sh","SOT","Pass","Tkl","T+","T−",""].map((h,i)=><th key={i} style={{color:h==="T+"?"#2ecc71":h==="T−"?"#e63946":"#5a6a8a",fontWeight:700,padding:"10px 8px",textAlign:"left",whiteSpace:"nowrap",fontSize:11,letterSpacing:1}}>{h}</th>)}
         </tr></thead>
         <tbody>{filtered.map(s=><tr key={s.id} style={{borderBottom:"1px solid #1a2540"}}>
           <td style={{color:"#8892a8",padding:"12px 8px",whiteSpace:"nowrap"}}>{s.date}</td>
           <td style={{color:"#fff",padding:"12px 8px",fontWeight:600}}>{s.opponent}</td>
           <td style={{padding:"12px 8px"}}><span style={{color:rcol[s.result]||"#fff",fontWeight:700,background:(rcol[s.result]||"#fff")+"22",padding:"2px 10px",borderRadius:6,fontSize:12}}>{s.result}</span></td>
+          <td style={{color:"#c8d0e0",padding:"12px 8px",fontWeight:700,whiteSpace:"nowrap"}}>{(s.scoreFor!==""&&s.scoreFor!=null&&s.scoreAgainst!==""&&s.scoreAgainst!=null)?s.scoreFor+"-"+s.scoreAgainst:<span style={{color:"#3a4560"}}>—</span>}</td>
           <td style={{color:"#4a7ccc",padding:"12px 8px",fontWeight:600}}>{s.position}</td>
           <td style={{color:"#8892a8",padding:"12px 8px"}}>{s.minutes}'</td>
           <td style={{color:s.goals>0?"#e63946":"#3a4560",padding:"12px 8px",fontWeight:s.goals>0?700:400}}>{s.goals}</td>
@@ -416,6 +447,9 @@ function Stats(){
           <div><label style={LS}>Date</label><input type="date" value={form.date} onChange={e=>setF({...form,date:e.target.value})} style={IS}/></div>
           <div><label style={LS}>Opponent</label><input value={form.opponent} onChange={e=>setF({...form,opponent:e.target.value})} placeholder="e.g. Solar SC" style={IS}/></div>
           <div><label style={LS}>Result</label><select value={form.result} onChange={e=>setF({...form,result:e.target.value})} style={IS}><option value="W">Win</option><option value="D">Draw</option><option value="L">Loss</option></select></div></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><label style={LS}>Score For</label><input type="number" min="0" value={form.scoreFor} onChange={e=>setF({...form,scoreFor:e.target.value})} placeholder="Our goals" style={IS}/></div>
+          <div><label style={LS}>Score Against</label><input type="number" min="0" value={form.scoreAgainst} onChange={e=>setF({...form,scoreAgainst:e.target.value})} placeholder="Their goals" style={IS}/></div></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div><label style={LS}>Position</label><select value={form.position} onChange={e=>setF({...form,position:e.target.value})} style={IS}>{POS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
           <div><label style={LS}>Minutes</label><input type="number" min="0" max="120" value={form.minutes} onChange={e=>setF({...form,minutes:e.target.value})} style={IS}/></div></div>
