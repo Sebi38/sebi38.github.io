@@ -1,5 +1,6 @@
 import { FALL25_STATS } from './fall2025.js';
 import { SPRING26_STATS, SPRING26_JOURNAL } from './spring2026.js';
+import { FALL26_STATS, FALL26_JOURNAL } from './fall2026.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The season registry.
@@ -34,6 +35,14 @@ export const SEASONS = [
     stats: SPRING26_STATS,
     journal: SPRING26_JOURNAL,
     journalSeedKey: "spring26-j",
+  },
+  {
+    idPrefix: "fa26",
+    label: "Fall '26",
+    seedKey: "fall26",
+    stats: FALL26_STATS,
+    journal: FALL26_JOURNAL,
+    journalSeedKey: "fall26-j",
   },
 ];
 

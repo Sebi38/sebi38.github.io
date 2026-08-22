@@ -1,0 +1,48 @@
+// Fall 2026 season — generated from the TeamSnap iCal feed.
+//
+// Source: the family TeamSnap calendar, filtered to "U14 Boys MLS HD" fixtures
+// between Aug and Dec 2026. The feed URL is a personal token URL covering the
+// whole family calendar, so it is deliberately not stored in this repo.
+//
+// NOTE: TeamSnap's "vs"/"at" wording does not reliably indicate home or away —
+// several "vs" fixtures are at the opponent's ground and vice versa — so it is
+// not recorded. The venue in `notes` comes from the calendar and is accurate.
+//
+// Seeded into Firebase once; see src/lib/seeds.js.
+export const FALL26_STATS = [
+  {id:"fa26-1",date:"2026-08-16",opponent:"2013 AD",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Scrimmage · 4421 W. Braddock Rd, Alexandria, VA 22304 · 12:00 PM"},
+  {id:"fa26-2",date:"2026-08-22",opponent:"Arlington ECNL",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Scrimmage · 5241 36th St N, Arlington, VA 22207 · 2:15 PM"},
+  {id:"fa26-3",date:"2026-08-23",opponent:"FVU",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Scrimmage · 5035 Sideburn Rd, Fairfax, VA 22032 · 10:30 AM"},
+  {id:"fa26-4",date:"2026-08-29",opponent:"IFA U14 MLSN HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Potomac Lakes Sportsplex · 4:15 PM"},
+  {id:"fa26-5",date:"2026-08-30",opponent:"VDA ECNL 2012/13",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Potomac Lakes Sportsplex · 12:45 PM"},
+  {id:"fa26-6",date:"2026-09-06",opponent:"Keystone 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Bermudian Springs High School · 10:00 AM"},
+  {id:"fa26-7",date:"2026-09-13",opponent:"Bethesda 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM"},
+  {id:"fa26-8",date:"2026-09-20",opponent:"Beadling 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"225 McCormick Wy, Triadelphia, WV 26059 · 4:00 PM"},
+  {id:"fa26-9",date:"2026-09-26",opponent:"Philadelphia Union 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"1800 Limerick St, Alexandria, VA 22314 · 5:00 PM"},
+  {id:"fa26-10",date:"2026-09-27",opponent:"Sporting Athletic 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM"},
+  {id:"fa26-11",date:"2026-10-03",opponent:"Coppermine 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"4250 W Braddock Rd, Alexandria, VA 22304 · 2:30 PM"},
+  {id:"fa26-12",date:"2026-10-18",opponent:"NVA 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"4800 Brenman Park Dr, Alexandria, VA 22304 · 2:00 PM"},
+  {id:"fa26-13",date:"2026-10-25",opponent:"PDA 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM"},
+  {id:"fa26-14",date:"2026-11-01",opponent:"Baltimore Armour 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM"},
+  {id:"fa26-15",date:"2026-11-08",opponent:"Sporting Athletic 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Chase Fields · 12:00 PM"},
+  {id:"fa26-16",date:"2026-11-14",opponent:"Coppermine 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"St Paul's School · 12:00 PM"},
+];
+
+export const FALL26_JOURNAL = [
+  {id:"faj26-1",date:"2026-08-16",opponent:"2013 AD",location:"Scrimmage · 4421 W. Braddock Rd, Alexandria, VA 22304 · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-1"},
+  {id:"faj26-2",date:"2026-08-22",opponent:"Arlington ECNL",location:"Scrimmage · 5241 36th St N, Arlington, VA 22207 · 2:15 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-2"},
+  {id:"faj26-3",date:"2026-08-23",opponent:"FVU",location:"Scrimmage · 5035 Sideburn Rd, Fairfax, VA 22032 · 10:30 AM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-3"},
+  {id:"faj26-4",date:"2026-08-29",opponent:"IFA U14 MLSN HG",location:"Potomac Lakes Sportsplex · 4:15 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-4"},
+  {id:"faj26-5",date:"2026-08-30",opponent:"VDA ECNL 2012/13",location:"Potomac Lakes Sportsplex · 12:45 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-5"},
+  {id:"faj26-6",date:"2026-09-06",opponent:"Keystone 2013 HG",location:"Bermudian Springs High School · 10:00 AM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-6"},
+  {id:"faj26-7",date:"2026-09-13",opponent:"Bethesda 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-7"},
+  {id:"faj26-8",date:"2026-09-20",opponent:"Beadling 2013 HG",location:"225 McCormick Wy, Triadelphia, WV 26059 · 4:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-8"},
+  {id:"faj26-9",date:"2026-09-26",opponent:"Philadelphia Union 2013 HG",location:"1800 Limerick St, Alexandria, VA 22314 · 5:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-9"},
+  {id:"faj26-10",date:"2026-09-27",opponent:"Sporting Athletic 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-10"},
+  {id:"faj26-11",date:"2026-10-03",opponent:"Coppermine 2013 HG",location:"4250 W Braddock Rd, Alexandria, VA 22304 · 2:30 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-11"},
+  {id:"faj26-12",date:"2026-10-18",opponent:"NVA 2013 HG",location:"4800 Brenman Park Dr, Alexandria, VA 22304 · 2:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-12"},
+  {id:"faj26-13",date:"2026-10-25",opponent:"PDA 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-13"},
+  {id:"faj26-14",date:"2026-11-01",opponent:"Baltimore Armour 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-14"},
+  {id:"faj26-15",date:"2026-11-08",opponent:"Sporting Athletic 2013 HG",location:"Chase Fields · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-15"},
+  {id:"faj26-16",date:"2026-11-14",opponent:"Coppermine 2013 HG",location:"St Paul's School · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-16"},
+];
