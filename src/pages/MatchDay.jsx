@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { SK, POS } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
@@ -40,11 +40,22 @@ export default function MatchDay({ stats, journal }) {
   const [started, setStarted] = useState(null);
   const [moment, setMoment] = useState("");
   const [moments, setMoments] = useState([]);
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState("");      // "saving" | "saved" | ""
+  const [savedAt, setSavedAt] = useState(null);
+  // Nothing is written until you actually change something, so opening a
+  // fixture to look at it never records anything.
+  const touched = useRef(false);
+  // A 0–0 scoreline is only a draw once someone has touched the score.
+  const scoreTouched = useRef(false);
+  // Suppress the autosave effect while a fixture's saved values load in.
+  const loading = useRef(false);
 
   // Load whatever is already recorded for this fixture.
   useEffect(() => {
     if (!fixture) return;
+    loading.current = true;
+    touched.current = false;
+    scoreTouched.current = false;
     setGoals(fixture.goals || 0);
     setAssists(fixture.assists || 0);
     setSf(Number(fixture.scoreFor) || 0);
@@ -57,47 +68,83 @@ export default function MatchDay({ stats, journal }) {
     setStarted(typeof fixture.started === "boolean" ? fixture.started : null);
     const j = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
     setMoments(j?.freeform ? j.freeform.split("\n").filter(Boolean) : []);
-    setSaved(false);
+    setStatus("");
+    setSavedAt(null);
+    // Let this render settle before autosave starts watching.
+    const t = setTimeout(() => { loading.current = false; }, 0);
+    return () => clearTimeout(t);
   }, [fixtureId]);
+
+  // Wrap the setters so any real edit arms the autosave.
+  const edit = fn => v => { touched.current = true; fn(v); };
+  const editScore = fn => v => { touched.current = true; scoreTouched.current = true; fn(v); };
 
   const result = resultFromScore(sf, sa);
   const r = RESULT[result] || RESULT["—"];
 
+  // Moments write straight through rather than waiting for the debounce —
+  // they are the thing most easily lost, and each one is a discrete event.
   const addMoment = () => {
     if (!moment.trim()) return;
-    setMoments(m => [...m, `${clockNow()} — ${moment.trim()}`]);
+    const next = [...moments, `${clockNow()} — ${moment.trim()}`];
+    touched.current = true;
+    setMoments(next);
     setMoment("");
+    persist({ moments: next });
+  };
+
+  const removeMoment = i => {
+    const next = moments.filter((_, j) => j !== i);
+    touched.current = true;
+    setMoments(next);
+    persist({ moments: next });
   };
 
   // Writes go to localStorage first and mirror to Firebase, so this works
   // offline and syncs when the connection returns.
-  const save = () => {
+  const persist = useCallback((overrides = {}) => {
     if (!fixture) return;
+    const m = overrides.moments ?? moments;
     const allStats = ld(SK.stats) || [];
     const playedPositions = positions.filter(Boolean);
-    sv(SK.stats, allStats.map(s => s.id === fixture.id
-      ? { ...s, goals, assists, scoreFor: sf, scoreAgainst: sa, minutes, result,
+    sv(SK.stats, allStats.map(st => st.id === fixture.id
+      ? { ...st, goals, assists, minutes,
           positions: playedPositions,
-          position: playedPositions[0] || s.position || "",
-          started }
-      : s));
+          position: playedPositions[0] || st.position || "",
+          started,
+          // Leave the score and result alone until someone has touched them,
+          // so an untouched fixture is never recorded as a 0–0 draw.
+          ...(scoreTouched.current
+            ? { scoreFor: sf, scoreAgainst: sa, result: resultFromScore(sf, sa) }
+            : {}) }
+      : st));
 
     const allJournal = ld(SK.journal) || [];
     const existing = allJournal.find(e => e.statId === fixture.id || e.date === fixture.date);
-    const freeform = moments.join("\n");
+    const freeform = m.join("\n");
     if (existing) {
       sv(SK.journal, allJournal.map(e => e.id === existing.id
         ? { ...e, freeform, statId: fixture.id } : e));
     } else if (freeform) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
-        location: fixture.notes || "", surface: "grass", position: playedPositions[0] || fixture.position || "CB",
+        location: fixture.notes || "", surface: "grass",
+        position: playedPositions[0] || fixture.position || "CB",
         wentWell: "", toImprove: "", rating: 5, freeform, statId: fixture.id,
       }, ...allJournal]);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2600);
-  };
+    setStatus("saved");
+    setSavedAt(new Date());
+  }, [fixture, goals, assists, sf, sa, minutes, positions, started, moments]);
+
+  // Autosave. Every change is written, so nothing depends on remembering to
+  // press a button during a match.
+  useEffect(() => {
+    if (!fixture || loading.current || !touched.current) return;
+    setStatus("saving");
+    const t = setTimeout(() => persist(), 600);
+    return () => clearTimeout(t);
+  }, [goals, assists, sf, sa, minutes, positions, started, moments, fixture, persist]);
 
   if (!stats.length) {
     return <div style={PAGE}><Empty icon="⚽" text="No fixtures yet."/></div>;
@@ -144,8 +191,8 @@ export default function MatchDay({ stats, journal }) {
           {/* score */}
           <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(1)}}>
             <div className="pair">
-              <Stepper label="Us" value={sf} onChange={setSf} accent={C.blue}/>
-              <Stepper label="Them" value={sa} onChange={setSa} accent={C.muted}/>
+              <Stepper label="Us" value={sf} onChange={editScore(setSf)} accent={C.blue}/>
+              <Stepper label="Them" value={sa} onChange={editScore(setSa)} accent={C.muted}/>
             </div>
             <div style={{textAlign: "center", marginTop: 14}}>
               <span style={{background: r.bg, color: r.fg, border: `1px solid ${r.fg}44`,
@@ -159,13 +206,13 @@ export default function MatchDay({ stats, journal }) {
           {/* Seb's numbers */}
           <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(2)}}>
             <div className="pair">
-              <Stepper label="Goals" value={goals} onChange={setGoals} accent={C.red}/>
-              <Stepper label="Assists" value={assists} onChange={setAssists} accent={RESULT.W.fg}/>
+              <Stepper label="Goals" value={goals} onChange={edit(setGoals)} accent={C.red}/>
+              <Stepper label="Assists" value={assists} onChange={edit(setAssists)} accent={RESULT.W.fg}/>
             </div>
           </div>
 
           <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(3)}}>
-            <Stepper label="Minutes played" value={minutes} onChange={setMinutes}
+            <Stepper label="Minutes played" value={minutes} onChange={edit(setMinutes)}
                      accent={C.gold} step={5} max={120}/>
           </div>
 
@@ -183,7 +230,7 @@ export default function MatchDay({ stats, journal }) {
                     {["1ST", "2ND", "3RD"][i]}
                   </div>
                   <select value={positions[i]}
-                          onChange={e => setPositions(p => p.map((v, j) => j === i ? e.target.value : v))}
+                          onChange={e => { touched.current = true; setPositions(p => p.map((v, j) => j === i ? e.target.value : v)); }}
                           style={{...IS, padding: "13px 8px", fontSize: 15, textAlign: "center",
                                   textAlignLast: "center",
                                   color: positions[i] ? C.ink : C.faint}}>
@@ -199,7 +246,7 @@ export default function MatchDay({ stats, journal }) {
 
             <div style={{height: 1, background: C.line, margin: "18px 0"}}/>
 
-            <Segmented label="Started" value={started} onChange={setStarted}
+            <Segmented label="Started" value={started} onChange={edit(setStarted)}
                        accent={C.gold}
                        options={[{v: true, l: "Yes"}, {v: false, l: "No"}]}/>
           </div>
@@ -222,7 +269,7 @@ export default function MatchDay({ stats, journal }) {
                   <div key={i} style={{display: "flex", gap: 8, alignItems: "flex-start",
                                        background: C.bg, borderRadius: 8, padding: "8px 10px"}}>
                     <span style={{color: C.ink2, fontSize: 13, lineHeight: 1.5, flex: 1}}>{m}</span>
-                    <button type="button" onClick={() => setMoments(x => x.filter((_, j) => j !== i))}
+                    <button type="button" onClick={() => removeMoment(i)}
                             style={{background: "none", border: "none", color: C.faint,
                                     cursor: "pointer", fontSize: 14, padding: 0}}>✕</button>
                   </div>
@@ -231,11 +278,25 @@ export default function MatchDay({ stats, journal }) {
             )}
           </div>
 
-          <button type="button" onClick={save}
-                  style={{...BP, width: "100%", padding: "16px", fontSize: 15,
-                          background: saved ? RESULT.W.fg : BP.background}}>
-            {saved ? "✓ SAVED" : "SAVE"}
-          </button>
+          {/* Autosave status. The button is a reassurance, not a requirement —
+              everything above is already written as you tap. */}
+          <div style={{display: "flex", alignItems: "center", gap: 12, marginTop: 4}}>
+            <div style={{flex: 1, display: "flex", alignItems: "center", gap: 8}}>
+              <span style={{width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                            background: status === "saving" ? C.gold
+                                      : status === "saved" ? RESULT.W.fg : C.faint,
+                            animation: status === "saving" ? "pulseDot 1s ease-in-out infinite" : "none"}}/>
+              <span style={{color: status === "saved" ? RESULT.W.fg : C.muted,
+                            fontSize: 12.5, fontWeight: 600}}>
+                {status === "saving" ? "Saving…"
+                  : status === "saved"
+                    ? `Saved${savedAt ? " " + savedAt.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) : ""}`
+                    : "Changes save automatically"}
+              </span>
+            </div>
+            <button type="button" onClick={() => persist()}
+                    style={{...BS, padding: "10px 18px", fontSize: 13}}>Save now</button>
+          </div>
 
           <p style={{color: C.faint, fontSize: 12, textAlign: "center", marginTop: 12, lineHeight: 1.6}}>
             Passes, tackles and Taka counts aren't here on purpose — they come from
