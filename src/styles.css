@@ -1,9 +1,50 @@
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0f1e;font-family:'Outfit',sans-serif;color:#fff;min-height:100vh}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:#0a0f1e}
+body{
+  background:#070b16;
+  font-family:'Outfit',sans-serif;
+  color:#fff;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#070b16}
 ::-webkit-scrollbar-thumb{background:#1e2d50;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a3c66}
+
 input[type=range]{-webkit-appearance:none;height:6px;background:#1e2d50;border-radius:3px;outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#e63946;border-radius:50%;cursor:pointer}
 table{font-family:'Outfit',sans-serif}
 ::placeholder{color:#3a4560}
+a{color:inherit}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+@keyframes rise{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:none}
+}
+@keyframes fade{ from{opacity:0} to{opacity:1} }
+@keyframes pulseDot{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.45;transform:scale(.82)}
+}
+
+/* Lift on hover for anything marked as a card */
+.lift{transition:transform .22s cubic-bezier(.22,1,.36,1), border-color .22s, box-shadow .22s}
+.lift:hover{transform:translateY(-3px);border-color:#2a3c66;box-shadow:0 12px 30px rgba(0,0,0,.38)}
+
+/* Respect users who don't want motion */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+
+/* ── Stat tile grid ──────────────────────────────────────────────────────── */
+/* Inline styles can't express breakpoints, so the KPI row lives here.
+   Six tiles: 6 across on desktop, 3 on tablet, 2 on phones — never an orphan. */
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media (max-width:980px){ .tiles{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:540px){ .tiles{grid-template-columns:repeat(2,1fr)} }
+
+/* Gallery: never fewer than 2 up, never more than 4 */
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:900px){ .gallery{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:600px){ .gallery{grid-template-columns:repeat(2,1fr)} }

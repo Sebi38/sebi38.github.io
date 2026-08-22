@@ -6,6 +6,7 @@ import { loadFirebaseToLocal } from './lib/sync.js';
 import Nav from './ui/Nav.jsx';
 import SignIn from './pages/SignIn.jsx';
 import Home from './pages/Home.jsx';
+import Schedule from './pages/Schedule.jsx';
 import Highlights from './pages/Highlights.jsx';
 import Training from './pages/Training.jsx';
 import Journal from './pages/Journal.jsx';
@@ -13,6 +14,7 @@ import Stats from './pages/Stats.jsx';
 
 const PAGES = {
   home: Home,
+  schedule: Schedule,
   highlights: Highlights,
   training: Training,
   journal: Journal,
@@ -76,7 +78,7 @@ export default function App() {
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
       <Nav active={page} setActive={setPage}/>
-      <Page stats={statsData} journal={journalData}/>
+      <Page stats={statsData} journal={journalData} setPage={setPage}/>
     </div>
   );
 }
