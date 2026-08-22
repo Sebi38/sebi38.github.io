@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "seb38": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

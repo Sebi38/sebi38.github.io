@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+*.log
+
+# Imported personal data — Veo film links, coaching-session share links, and
+# access codes. These were seeded into Firebase once and live there now
+# (behind auth). They are deliberately NOT committed: this repo is public.
+private/
