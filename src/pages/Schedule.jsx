@@ -100,29 +100,38 @@ export default function Schedule({ stats }) {
       <NextUp game={next}/>
 
       {/* season summary strip */}
-      <div style={{...CardS,padding:"14px 18px",marginBottom:22,display:"flex",gap:22,
-                   alignItems:"center",flexWrap:"wrap",...rise(1)}}>
-        <div>
-          <div style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>
-            {seasonLabel}{seasonTeam && <span style={{color:C.faint}}> · {seasonTeam}</span>}
+      <div style={{...CardS, padding:"16px 18px 14px", marginBottom:22, ...rise(1)}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+                     gap:16, flexWrap:"wrap", marginBottom:14}}>
+          <div style={{color:C.ink3, fontSize:11, fontWeight:800, letterSpacing:1.8,
+                       textTransform:"uppercase"}}>
+            {seasonLabel}
+            {seasonTeam && <span style={{color:C.faint, fontWeight:600}}> · {seasonTeam}</span>}
           </div>
-          <div style={{fontFamily:DISPLAY,fontSize:26,color:C.ink,lineHeight:1.15}}>
-            {rec.w}<span style={{color:C.muted,fontSize:16}}>W</span>{" "}
-            {rec.d}<span style={{color:C.muted,fontSize:16}}>D</span>{" "}
-            {rec.l}<span style={{color:C.muted,fontSize:16}}>L</span>
-          </div>
-        </div>
-        {(rec.gf>0||rec.ga>0) && (
-          <div>
-            <div style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>Goals</div>
-            <div style={{fontFamily:DISPLAY,fontSize:26,color:C.ink,lineHeight:1.15}}>
-              {rec.gf}<span style={{color:C.muted,fontSize:16}}>:</span>{rec.ga}
+          {form(scoped,5).length > 0 && (
+            <div style={{display:"flex", alignItems:"center", gap:10}}>
+              <span style={{color:C.muted, fontSize:10, fontWeight:800, letterSpacing:1.6,
+                            textTransform:"uppercase"}}>Form</span>
+              <FormGuide games={form(scoped,5)} size={26}/>
             </div>
-          </div>
-        )}
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>Form</span>
-          <FormGuide games={form(scoped,5)} size={26}/>
+          )}
+        </div>
+
+        <div className="record">
+          {[
+            {v: rec.played, l: "Played",  c: C.ink},
+            {v: rec.w,      l: "Won",     c: RESULT.W.fg},
+            {v: rec.d,      l: "Drawn",   c: RESULT.D.fg},
+            {v: rec.l,      l: "Lost",    c: RESULT.L.fg},
+            {v: rec.gf,     l: "For",     c: C.blue},
+            {v: rec.ga,     l: "Against", c: C.muted},
+          ].map(cell => (
+            <div key={cell.l} style={{textAlign:"center", padding:"10px 4px"}}>
+              <div style={{fontFamily:DISPLAY, fontSize:30, lineHeight:1, color:cell.c}}>{cell.v}</div>
+              <div style={{color:C.muted, fontSize:9.5, fontWeight:800, letterSpacing:1.4,
+                           textTransform:"uppercase", marginTop:6}}>{cell.l}</div>
+            </div>
+          ))}
         </div>
       </div>
 

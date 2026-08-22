@@ -54,3 +54,16 @@ a{color:inherit}
    controls stay full-size and thumb-friendly instead of shrinking. */
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media (max-width:600px){ .pair{grid-template-columns:1fr;gap:22px} }
+
+/* ── Season record row ───────────────────────────────────────────────────── */
+/* Six labelled cells. Six across when there's room, three on a phone —
+   never a cramped run of numbers jammed against subscript letters. */
+.record{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.record > *{border-left:1px solid #1a2540}
+.record > *:first-child{border-left:none}
+@media (max-width:760px){
+  /* Three across: the first cell of each row must not carry a divider, and the
+     two rows need room to breathe. */
+  .record{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}
+  .record > *:nth-child(3n+1){border-left:none}
+}
