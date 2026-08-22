@@ -3,6 +3,8 @@ import { PLAYER } from '../config.js';
 export const TABS = [
   {id:"home",       label:"Home",       icon:"🏠"},
   {id:"schedule",   label:"Schedule",   icon:"📅"},
+  {id:"matchday",   label:"Match Day",  icon:"⏱"},
+  {id:"reflect",    label:"My Match",   icon:"🧠"},
   {id:"highlights", label:"Highlights", icon:"⭐"},
   {id:"training",   label:"Training",   icon:"📚"},
   {id:"journal",    label:"Journal",    icon:"📝"},

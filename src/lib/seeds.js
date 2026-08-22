@@ -1,6 +1,7 @@
 import { db, ROOT } from './firebase.js';
 import { SEASONS } from '../data/seasons.js';
 import { fbSnapToArray, arrayToFbObj } from './storage.js';
+import { readOnce } from './net.js';
 
 const seedRef = key => db.ref(`${ROOT}/seeds/${key}`);
 const dataRef = node => db.ref(`${ROOT}/data/${node}`);
@@ -8,7 +9,7 @@ const dataRef = node => db.ref(`${ROOT}/data/${node}`);
 // Prepend `rows` to a collection, once, guarded by a seed flag.
 async function seedOnce(seedKey, node, rows, alreadyRun) {
   if (alreadyRun[seedKey]) return;
-  const existing = fbSnapToArray(await dataRef(node).once('value'));
+  const existing = fbSnapToArray(await readOnce(dataRef(node)));
   await dataRef(node).set(arrayToFbObj([...rows, ...existing]));
   await seedRef(seedKey).set(true);
 }
@@ -18,7 +19,7 @@ async function seedOnce(seedKey, node, rows, alreadyRun) {
 // stays meaningful for databases that have already run it.
 async function linkSpring26Journal(alreadyRun) {
   if (alreadyRun['spring26-link']) return;
-  const entries = fbSnapToArray(await dataRef('journal').once('value'));
+  const entries = fbSnapToArray(await readOnce(dataRef('journal')));
   const linkMap = Object.fromEntries(
     Array.from({ length: 9 }, (_, i) => [`spj26-${i + 1}`, `sp26-${i + 1}`])
   );
@@ -38,7 +39,7 @@ async function linkSpring26Journal(alreadyRun) {
 // is deliberately not kept in this repository, which is public. See
 // private/README.md — untracked — if it ever needs re-seeding.
 export async function runSeedsIfNeeded() {
-  const alreadyRun = (await db.ref(`${ROOT}/seeds`).once('value')).val() || {};
+  const alreadyRun = (await readOnce(db.ref(`${ROOT}/seeds`))).val() || {};
 
   for (const season of SEASONS) {
     if (season.stats?.length) {

@@ -7,6 +7,8 @@ import Nav from './ui/Nav.jsx';
 import SignIn from './pages/SignIn.jsx';
 import Home from './pages/Home.jsx';
 import Schedule from './pages/Schedule.jsx';
+import MatchDay from './pages/MatchDay.jsx';
+import Reflect from './pages/Reflect.jsx';
 import Highlights from './pages/Highlights.jsx';
 import Training from './pages/Training.jsx';
 import Journal from './pages/Journal.jsx';
@@ -15,11 +17,25 @@ import Stats from './pages/Stats.jsx';
 const PAGES = {
   home: Home,
   schedule: Schedule,
+  matchday: MatchDay,
+  reflect: Reflect,
   highlights: Highlights,
   training: Training,
   journal: Journal,
   stats: Stats,
 };
+
+// Shown when the database could not be reached. The app keeps working from
+// the localStorage cache and mirrors edits up once the connection returns.
+function OfflineBar() {
+  return (
+    <div style={{background:"rgba(244,162,97,.12)",borderBottom:"1px solid rgba(244,162,97,.28)",
+                 color:"#f4a261",fontSize:12.5,fontWeight:600,padding:"8px 16px",textAlign:"center",
+                 fontFamily:"'Outfit',sans-serif"}}>
+      ⚡ Offline — showing saved data. Anything you enter is kept and syncs when you're back online.
+    </div>
+  );
+}
 
 function Splash({ text }) {
   return (
@@ -38,7 +54,7 @@ export default function App() {
   const [statsData, setStatsData] = useState([]);
   const [journalData, setJournalData] = useState([]);
   const [dbReady, setDbReady] = useState(false);
-  const [loadError, setLoadError] = useState('');
+  const [offline, setOffline] = useState(false);
 
   // Firebase restores the session asynchronously on load.
   useEffect(() => onAuthReady(u => { setUser(u); setAuthChecked(true); }), []);
@@ -50,9 +66,12 @@ export default function App() {
     (async () => {
       try {
         await loadFirebaseToLocal();
+        if (!cancelled) setOffline(false);
       } catch (e) {
-        console.error("Firebase load failed:", e);
-        if (!cancelled) setLoadError(e?.message || 'Could not load data.');
+        // Offline or unreachable: fall through to whatever localStorage holds.
+        // Edits still work and are mirrored up when the connection returns.
+        console.warn("Working from cached data:", e?.message || e);
+        if (!cancelled) setOffline(true);
       }
       if (cancelled) return;
       setStatsData(ld(SK.stats) || []);
@@ -71,13 +90,14 @@ export default function App() {
 
   if (!authChecked) return <Splash text="Checking sign-in…"/>;
   if (!user) return <SignIn/>;
-  if (!dbReady) return <Splash text={loadError || "Loading data…"}/>;
+  if (!dbReady) return <Splash text="Loading data…"/>;
 
   const Page = PAGES[page] || Home;
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
       <Nav active={page} setActive={setPage}/>
+      {offline && <OfflineBar/>}
       <Page stats={statsData} journal={journalData} setPage={setPage}/>
     </div>
   );

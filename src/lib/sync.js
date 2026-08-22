@@ -1,12 +1,13 @@
 import { db, ROOT } from './firebase.js';
 import { ld, arrayToFbObj, NODE_MAP } from './storage.js';
 import { runSeedsIfNeeded } from './seeds.js';
+import { readOnce } from './net.js';
 
 // Pull the whole database into localStorage, which is what the UI renders from.
 // On a first run against an empty database, push whatever is already in
 // localStorage up first so nothing is lost.
 export async function loadFirebaseToLocal() {
-  const existing = await db.ref(`${ROOT}/data`).once('value');
+  const existing = await readOnce(db.ref(`${ROOT}/data`));
 
   if (!existing.val()) {
     const migration = {};
@@ -23,7 +24,7 @@ export async function loadFirebaseToLocal() {
 
   await runSeedsIfNeeded();
 
-  const data = (await db.ref(`${ROOT}/data`).once('value')).val() || {};
+  const data = (await readOnce(db.ref(`${ROOT}/data`))).val() || {};
   Object.entries(NODE_MAP).forEach(([node, storageKey]) => {
     const rows = data[node];
     if (!rows) return;
