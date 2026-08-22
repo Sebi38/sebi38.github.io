@@ -14,6 +14,15 @@ import Training from './pages/Training.jsx';
 import Journal from './pages/Journal.jsx';
 import Stats from './pages/Stats.jsx';
 
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// Tabs are addressable as #matchday, #schedule, … so the back button works,
+// a refresh keeps your place, and a home-screen icon can point at one.
+const readHash = () => {
+  const h = (window.location.hash || '').replace(/^#/, '');
+  return h in PAGES ? h : null;
+};
+
 const PAGES = {
   home: Home,
   schedule: Schedule,
@@ -50,7 +59,8 @@ export default function App() {
   // null = still checking for a restored session
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(() => readHash() || "home");
+  const [autoRouted, setAutoRouted] = useState(false);
   const [statsData, setStatsData] = useState([]);
   const [journalData, setJournalData] = useState([]);
   const [dbReady, setDbReady] = useState(false);
@@ -58,6 +68,26 @@ export default function App() {
 
   // Firebase restores the session asynchronously on load.
   useEffect(() => onAuthReady(u => { setUser(u); setAuthChecked(true); }), []);
+
+  // Reflect the active tab in the URL, and follow back/forward.
+  useEffect(() => {
+    if (readHash() !== page) window.location.hash = page;
+  }, [page]);
+  useEffect(() => {
+    const onHash = () => { const h = readHash(); if (h && h !== page) setPage(h); };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [page]);
+
+  // On a match day, open straight onto Match Day — unless the URL already
+  // asked for a specific tab. Runs once, so it never yanks you mid-session.
+  useEffect(() => {
+    if (!dbReady || autoRouted) return;
+    setAutoRouted(true);
+    if (readHash()) return;
+    const t = todayStr();
+    if (statsData.some(g => g.date === t)) setPage('matchday');
+  }, [dbReady, autoRouted, statsData]);
 
   // Once signed in, pull the database down into localStorage.
   useEffect(() => {
