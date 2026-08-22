@@ -3,7 +3,7 @@ import { SK, POS } from '../config.js';
 import { SEASONS } from '../data/seasons.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue } from '../lib/numbers.js';
-import { IS, LS, BP, BS, CardS, H2, PAGE, RESULT_COLORS } from '../ui/theme.js';
+import { C, IS, LS, BP, BS, CardS, H2, PAGE, RESULT_COLORS, RESULT } from '../ui/theme.js';
 import Empty from '../ui/Empty.jsx';
 import Modal from '../ui/Modal.jsx';
 import Pill from '../ui/Pill.jsx';
@@ -11,7 +11,7 @@ import SearchBar from '../ui/SearchBar.jsx';
 
 const EMPTY_FORM = {date:"",opponent:"",position:"CM",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",result:"W",scoreFor:"",scoreAgainst:"",notes:""};
 
-const COLUMNS = ["Date","Opponent","Result","Score","Pos","Min","G","A","Sh","SOT","Pass","Tkl","T+","T−",""];
+const COLUMNS = ["Date","Opponent","Result","Score","Pos","St","Min","G","A","Sh","SOT","Pass","Tkl","T+","T−",""];
 
 const TakaCell = ({ value, color }) => (
   <td style={{padding:"12px 8px"}}>
@@ -129,7 +129,18 @@ export default function Stats() {
                 <td style={{color:"#fff",padding:"12px 8px",fontWeight:600}}>{s.opponent}</td>
                 <td style={{padding:"12px 8px"}}><span style={{color:RESULT_COLORS[s.result]||"#fff",fontWeight:700,background:(RESULT_COLORS[s.result]||"#fff")+"22",padding:"2px 10px",borderRadius:6,fontSize:12}}>{s.result}</span></td>
                 <td style={{color:"#c8d0e0",padding:"12px 8px",fontWeight:700,whiteSpace:"nowrap"}}>{hasValue(s.scoreFor)&&hasValue(s.scoreAgainst)?`${s.scoreFor}-${s.scoreAgainst}`:<span style={{color:"#3a4560"}}>—</span>}</td>
-                <td style={{color:"#4a7ccc",padding:"12px 8px",fontWeight:600}}>{s.position}</td>
+                <td style={{color:C.blue,padding:"12px 8px",fontWeight:600,whiteSpace:"nowrap"}}>
+                  {Array.isArray(s.positions) && s.positions.length > 1
+                    ? s.positions.join(" → ")
+                    : (s.position || "—")}
+                </td>
+                <td style={{padding:"12px 8px"}}>
+                  {s.started === true
+                    ? <span title="Started" style={{color:RESULT.W.fg,fontWeight:800,fontSize:11.5}}>XI</span>
+                    : s.started === false
+                      ? <span title="Came off the bench" style={{color:C.gold,fontWeight:700,fontSize:11}}>sub</span>
+                      : <span style={{color:C.faint}}>—</span>}
+                </td>
                 <td style={{color:"#8892a8",padding:"12px 8px"}}>{s.minutes}'</td>
                 <td style={{color:s.goals>0?"#e63946":"#3a4560",padding:"12px 8px",fontWeight:s.goals>0?700:400}}>{s.goals}</td>
                 <td style={{color:s.assists>0?"#2ecc71":"#3a4560",padding:"12px 8px",fontWeight:s.assists>0?700:400}}>{s.assists}</td>

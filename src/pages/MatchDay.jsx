@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
-import { SK } from '../config.js';
+import { SK, POS } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Stepper from '../ui/Stepper.jsx';
+import Segmented from '../ui/Segmented.jsx';
 import Empty from '../ui/Empty.jsx';
 import { upcoming, played, prettyDate, splitVenue, isPlayed, todayISO as todayStr } from '../lib/season.js';
 
@@ -33,6 +34,10 @@ export default function MatchDay({ stats, journal }) {
   const [sf, setSf] = useState(0);
   const [sa, setSa] = useState(0);
   const [minutes, setMinutes] = useState(0);
+  // Up to three positions, in the order he played them.
+  const [positions, setPositions] = useState(["", "", ""]);
+  // null = not recorded yet, so a blank fixture isn't claimed as "did not start".
+  const [started, setStarted] = useState(null);
   const [moment, setMoment] = useState("");
   const [moments, setMoments] = useState([]);
   const [saved, setSaved] = useState(false);
@@ -45,6 +50,11 @@ export default function MatchDay({ stats, journal }) {
     setSf(Number(fixture.scoreFor) || 0);
     setSa(Number(fixture.scoreAgainst) || 0);
     setMinutes(fixture.minutes || 0);
+    const existing = Array.isArray(fixture.positions) && fixture.positions.length
+      ? fixture.positions
+      : (fixture.position ? [fixture.position] : []);
+    setPositions([existing[0] || "", existing[1] || "", existing[2] || ""]);
+    setStarted(typeof fixture.started === "boolean" ? fixture.started : null);
     const j = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
     setMoments(j?.freeform ? j.freeform.split("\n").filter(Boolean) : []);
     setSaved(false);
@@ -64,8 +74,12 @@ export default function MatchDay({ stats, journal }) {
   const save = () => {
     if (!fixture) return;
     const allStats = ld(SK.stats) || [];
+    const playedPositions = positions.filter(Boolean);
     sv(SK.stats, allStats.map(s => s.id === fixture.id
-      ? { ...s, goals, assists, scoreFor: sf, scoreAgainst: sa, minutes, result }
+      ? { ...s, goals, assists, scoreFor: sf, scoreAgainst: sa, minutes, result,
+          positions: playedPositions,
+          position: playedPositions[0] || s.position || "",
+          started }
       : s));
 
     const allJournal = ld(SK.journal) || [];
@@ -77,7 +91,7 @@ export default function MatchDay({ stats, journal }) {
     } else if (freeform) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
-        location: fixture.notes || "", surface: "grass", position: fixture.position || "CB",
+        location: fixture.notes || "", surface: "grass", position: playedPositions[0] || fixture.position || "CB",
         wentWell: "", toImprove: "", rating: 5, freeform, statId: fixture.id,
       }, ...allJournal]);
     }
@@ -153,6 +167,41 @@ export default function MatchDay({ stats, journal }) {
           <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(3)}}>
             <Stepper label="Minutes played" value={minutes} onChange={setMinutes}
                      accent={C.gold} step={5} max={120}/>
+          </div>
+
+          {/* positions + started */}
+          <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(4)}}>
+            <div style={{color: C.muted, fontSize: 11, fontWeight: 800, letterSpacing: 1.6,
+                         textTransform: "uppercase", marginBottom: 10, textAlign: "center"}}>
+              Positions played
+            </div>
+            <div style={{display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8}}>
+              {[0, 1, 2].map(i => (
+                <div key={i}>
+                  <div style={{color: C.faint, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+                               textAlign: "center", marginBottom: 5}}>
+                    {["1ST", "2ND", "3RD"][i]}
+                  </div>
+                  <select value={positions[i]}
+                          onChange={e => setPositions(p => p.map((v, j) => j === i ? e.target.value : v))}
+                          style={{...IS, padding: "13px 8px", fontSize: 15, textAlign: "center",
+                                  textAlignLast: "center",
+                                  color: positions[i] ? C.ink : C.faint}}>
+                    <option value="">—</option>
+                    {POS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div style={{color: C.faint, fontSize: 11.5, textAlign: "center", marginTop: 9}}>
+              Leave 2nd and 3rd blank if he stayed in one position.
+            </div>
+
+            <div style={{height: 1, background: C.line, margin: "18px 0"}}/>
+
+            <Segmented label="Started" value={started} onChange={setStarted}
+                       accent={C.gold}
+                       options={[{v: true, l: "Yes"}, {v: false, l: "No"}]}/>
           </div>
 
           {/* moments */}
