@@ -5,9 +5,8 @@ import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Stepper from '../ui/Stepper.jsx';
 import Empty from '../ui/Empty.jsx';
-import { upcoming, played, prettyDate, splitVenue, isPlayed } from '../lib/season.js';
+import { upcoming, played, prettyDate, splitVenue, isPlayed, todayISO as todayStr } from '../lib/season.js';
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 // Pick the fixture this screen should open on: today's game if there is one,

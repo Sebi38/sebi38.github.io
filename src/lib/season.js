@@ -1,7 +1,13 @@
 // Helpers that turn the raw stats/journal rows into the things the UI shows:
 // the next fixture, recent form, and season splits.
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date. toISOString() is UTC, which rolls over at 7pm Eastern
+// and would make the app think tomorrow's fixtures are today's.
+export function todayISO(d = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+const today = todayISO;
 
 export const isPlayed = g => g.result && g.result !== "—";
 

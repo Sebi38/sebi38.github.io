@@ -3,6 +3,7 @@ import { SK } from './config.js';
 import { ld } from './lib/storage.js';
 import { onAuthReady } from './lib/firebase.js';
 import { loadFirebaseToLocal } from './lib/sync.js';
+import { todayISO } from './lib/season.js';
 import Nav from './ui/Nav.jsx';
 import SignIn from './pages/SignIn.jsx';
 import Home from './pages/Home.jsx';
@@ -13,8 +14,6 @@ import Highlights from './pages/Highlights.jsx';
 import Training from './pages/Training.jsx';
 import Journal from './pages/Journal.jsx';
 import Stats from './pages/Stats.jsx';
-
-const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // Tabs are addressable as #matchday, #schedule, … so the back button works,
 // a refresh keeps your place, and a home-screen icon can point at one.
@@ -55,6 +54,12 @@ function Splash({ text }) {
   );
 }
 
+// What the URL asked for on arrival. Captured once at module load: the effect
+// below keeps the hash in step with the active tab, so by the time any effect
+// runs the hash always looks "set" and can no longer be used to tell whether
+// the user actually requested a tab.
+const INITIAL_HASH = readHash();
+
 export default function App() {
   // null = still checking for a restored session
   const [user, setUser] = useState(null);
@@ -84,8 +89,8 @@ export default function App() {
   useEffect(() => {
     if (!dbReady || autoRouted) return;
     setAutoRouted(true);
-    if (readHash()) return;
-    const t = todayStr();
+    if (INITIAL_HASH) return;
+    const t = todayISO();
     if (statsData.some(g => g.date === t)) setPage('matchday');
   }, [dbReady, autoRouted, statsData]);
 
