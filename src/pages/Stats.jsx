@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { SK, POS } from '../config.js';
-import { SEASONS } from '../data/seasons.js';
+import { SEASONS, filterBySeason } from '../data/seasons.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { C, IS, LS, BP, BS, CardS, H2, PAGE, RESULT_COLORS, RESULT } from '../ui/theme.js';
@@ -56,10 +56,7 @@ export default function Stats() {
   const del = id => persist(stats.filter(s => s.id !== id));
 
   // Season filter pills come straight from the registry in src/data/seasons.js.
-  const seasonStats = useMemo(() => {
-    if (season === "all") return stats;
-    return stats.filter(s => (s.id||"").startsWith(season + "-"));
-  }, [stats, season]);
+  const seasonStats = useMemo(() => filterBySeason(stats, season), [stats, season]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return seasonStats;
@@ -113,7 +110,7 @@ export default function Stats() {
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
         <Pill label="All" active={season==="all"} onClick={()=>setSeason("all")}/>
         {SEASONS.map(s=>
-          <Pill key={s.idPrefix} label={s.label} active={season===s.idPrefix} onClick={()=>setSeason(s.idPrefix)}/>)}
+          <Pill key={s.id} label={s.label} active={season===s.id} onClick={()=>setSeason(s.id)}/>)}
       </div>
       <div style={{marginBottom:24}}><SearchBar value={search} onChange={setSearch} placeholder="Search opponent or date..."/></div>
 

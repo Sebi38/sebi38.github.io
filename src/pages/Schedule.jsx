@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { SEASONS } from '../data/seasons.js';
+import { SEASONS, inSeason, filterBySeason } from '../data/seasons.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, RESULT, rise } from '../ui/theme.js';
 import Pill from '../ui/Pill.jsx';
@@ -68,14 +68,12 @@ function groupByMonth(games) {
 
 export default function Schedule({ stats }) {
   // Default to the newest season that actually has fixtures.
-  const seasonsWithData = SEASONS.filter(s => stats.some(g => (g.id||"").startsWith(s.idPrefix+"-")));
+  const seasonsWithData = SEASONS.filter(s => stats.some(g => inSeason(s, g.id || "")));
   const newest = seasonsWithData[seasonsWithData.length-1];
-  const [season, setSeason] = useState(newest ? newest.idPrefix : "all");
+  const [season, setSeason] = useState(newest ? newest.id : "all");
   const [view, setView] = useState("upcoming");
 
-  const scoped = useMemo(() =>
-    season === "all" ? stats : stats.filter(g => (g.id||"").startsWith(season+"-")),
-    [stats, season]);
+  const scoped = useMemo(() => filterBySeason(stats, season), [stats, season]);
 
   const next = nextFixture(scoped);
   const rec = record(scoped);
@@ -84,14 +82,16 @@ export default function Schedule({ stats }) {
   const list = view === "upcoming" ? ups : res;
   const groups = groupByMonth(list);
 
-  const seasonLabel = SEASONS.find(s=>s.idPrefix===season)?.label || "All seasons";
+  const current = SEASONS.find(s=>s.id===season) || null;
+  const seasonLabel = current ? current.label : "All seasons";
+  const seasonTeam = current ? current.team : "";
 
   return (
     <div style={PAGE}>
       <SectionTitle right={
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {SEASONS.map(s=>(
-            <Pill key={s.idPrefix} label={s.label} active={season===s.idPrefix} onClick={()=>setSeason(s.idPrefix)}/>
+            <Pill key={s.id} label={s.label} active={season===s.id} onClick={()=>setSeason(s.id)}/>
           ))}
           <Pill label="All" active={season==="all"} onClick={()=>setSeason("all")}/>
         </div>
@@ -103,7 +103,9 @@ export default function Schedule({ stats }) {
       <div style={{...CardS,padding:"14px 18px",marginBottom:22,display:"flex",gap:22,
                    alignItems:"center",flexWrap:"wrap",...rise(1)}}>
         <div>
-          <div style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>{seasonLabel}</div>
+          <div style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>
+            {seasonLabel}{seasonTeam && <span style={{color:C.faint}}> · {seasonTeam}</span>}
+          </div>
           <div style={{fontFamily:DISPLAY,fontSize:26,color:C.ink,lineHeight:1.15}}>
             {rec.w}<span style={{color:C.muted,fontSize:16}}>W</span>{" "}
             {rec.d}<span style={{color:C.muted,fontSize:16}}>D</span>{" "}

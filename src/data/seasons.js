@@ -1,54 +1,61 @@
 import { FALL25_STATS } from './fall2025.js';
 import { SPRING26_STATS, SPRING26_JOURNAL } from './spring2026.js';
 import { FALL26_STATS, FALL26_JOURNAL } from './fall2026.js';
+import { SPRING27_STATS, SPRING27_JOURNAL } from './spring2027.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The season registry.
+// Two separate concerns, deliberately kept apart:
 //
-// TO ADD A NEW SEASON:
-//   1. Create src/data/<season>.js exporting an array of game rows. Give every
-//      row an id prefixed with the season's `idPrefix` (e.g. "fa26-1").
-//   2. Add one entry to SEASONS below.
-// That's it — the Stats filter pills and the Firebase seeding both read from
-// this list.
+//   SEED_BATCHES — how rows get into Firebase. One batch per half-season,
+//                  each guarded by its own flag. These mirror history and
+//                  must never be renamed.
 //
-// FIELDS:
-//   idPrefix  Row-id prefix. Also how Stats groups games into seasons.
-//   label     Text on the Stats filter pill.
-//   seedKey   Firebase flag at seb38/seeds/<seedKey> marking "already seeded".
-//             NEVER change or reuse an existing seedKey — that is the only
-//             thing stopping a season from being seeded into the database twice.
-//   stats     Game rows seeded into seb38/data/stats.
-//   journal   Optional journal rows seeded into seb38/data/journal.
+//   SEASONS      — how seasons are shown. A season is a full campaign
+//                  (autumn + spring), which is how the club runs them.
+//
+// A season spans several id prefixes, so the two lists are not one-to-one.
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ⚠️ NEVER change or reuse a `key`. The flag at seb38/seeds/<key> is the only
+// thing stopping a batch being written to the database twice. Reusing a key
+// that has run means the rows silently never appear; inventing a new key for
+// data that already ran means duplicates.
+export const SEED_BATCHES = [
+  { key: "fall25",     node: "stats",   rows: FALL25_STATS },
+  { key: "spring26",   node: "stats",   rows: SPRING26_STATS },
+  { key: "spring26-j", node: "journal", rows: SPRING26_JOURNAL },
+  { key: "fall26",     node: "stats",   rows: FALL26_STATS },
+  { key: "fall26-j",   node: "journal", rows: FALL26_JOURNAL },
+  { key: "spring27",   node: "stats",   rows: SPRING27_STATS },
+  { key: "spring27-j", node: "journal", rows: SPRING27_JOURNAL },
+];
+
+// Display seasons, oldest first. `prefixes` lists the row-id prefixes that
+// belong to the campaign — "fa25-1" and "sp26-4" are both 2025/26.
 export const SEASONS = [
   {
-    idPrefix: "fa25",
-    label: "Fall '25",
-    seedKey: "fall25",
-    stats: FALL25_STATS,
+    id: "2025-26",
+    label: "2025/26",
+    team: "ASA MLSNext U13",
+    prefixes: ["fa25", "sp26"],
   },
   {
-    idPrefix: "sp26",
-    label: "Spring '26",
-    seedKey: "spring26",
-    stats: SPRING26_STATS,
-    journal: SPRING26_JOURNAL,
-    journalSeedKey: "spring26-j",
-  },
-  {
-    idPrefix: "fa26",
-    label: "Fall '26",
-    seedKey: "fall26",
-    stats: FALL26_STATS,
-    journal: FALL26_JOURNAL,
-    journalSeedKey: "fall26-j",
+    id: "2026-27",
+    label: "2026/27",
+    team: "ASA MLSNext U14",
+    prefixes: ["fa26", "sp27"],
   },
 ];
 
-// Seeds run oldest-first so the newest season ends up at the top of the table.
-// The original single-file app seeded spring26 before fall25; order only
-// affects display sequence for rows added in the same batch, and every season
-// is guarded by its own seedKey, so re-ordering here cannot duplicate data.
-export const seasonFor = (id = "") =>
-  SEASONS.find(s => id.startsWith(s.idPrefix + "-")) || null;
+// Does this row id belong to the season?
+export const inSeason = (season, id = "") =>
+  season.prefixes.some(p => id.startsWith(p + "-"));
+
+export const seasonFor = (id = "") => SEASONS.find(s => inSeason(s, id)) || null;
+
+// Rows belonging to a season id, or everything for "all".
+export const filterBySeason = (rows, seasonId) => {
+  if (seasonId === "all") return rows;
+  const s = SEASONS.find(x => x.id === seasonId);
+  return s ? rows.filter(r => inSeason(s, r.id || "")) : rows;
+};
