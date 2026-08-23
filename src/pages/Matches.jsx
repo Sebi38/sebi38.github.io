@@ -413,10 +413,8 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44",textDecoration:"none"}}>🎥 Veo</a>}
                           <button onClick={ev=>{ev.stopPropagation();openMatch?.("matchday", r.id);}}
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.gold,borderColor:C.gold+"44"}}>⏱ Log match day</button>
-                          {isPlayed(r) && (
-                            <button onClick={ev=>{ev.stopPropagation();openMatch?.("reflect", r.id);}}
-                              style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44"}}>🧠 Sebi's review</button>
-                          )}
+                          <button onClick={ev=>{ev.stopPropagation();openMatch?.("reflect", r.id);}}
+                            style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44"}}>🧠 Sebi's review</button>
                           <button onClick={ev=>{ev.stopPropagation();openEdit(r);}}
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.blue,borderColor:C.blue+"44"}}>✏️ Edit match</button>
                           <button onClick={ev=>{ev.stopPropagation();remove(r.id);}}

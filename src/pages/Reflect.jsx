@@ -4,7 +4,8 @@ import { ld, sv, gid } from '../lib/storage.js';
 import { C, CardS, GlassS, DISPLAY, PAGE, IS, BP, RESULT, rC, rise, BS } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Empty from '../ui/Empty.jsx';
-import { played, prettyDate, isPlayed } from '../lib/season.js';
+import { prettyDate, isPlayed, todayISO,
+         fixtureChoices, fixtureLabel, defaultReviewFixture } from '../lib/season.js';
 import { questionsOf, questionsToText, mergeQuestionText } from '../lib/questions.js';
 
 // Seb's page. Three questions and nothing else — the reflection is the
@@ -16,9 +17,10 @@ const PROMPTS = [
 ];
 
 export default function Reflect({ stats, journal, focusId }) {
-  // Games already played, newest first — reflecting is a post-match act.
-  const games = useMemo(() => played(stats), [stats]);
-  const [gameId, setGameId] = useState(() => focusId || games[0]?.id || "");
+  // Every fixture, newest first — the same list Match Day offers, so today's
+  // game is always reachable even before it has a result.
+  const games = useMemo(() => fixtureChoices(stats), [stats]);
+  const [gameId, setGameId] = useState(() => focusId || defaultReviewFixture(stats)?.id || "");
   // Follow the match chosen on the Matches tab.
   useEffect(() => { if (focusId && focusId !== gameId) setGameId(focusId); }, [focusId]);
   const game = useMemo(() => games.find(g => g.id === gameId) || null, [games, gameId]);
@@ -78,7 +80,7 @@ export default function Reflect({ stats, journal, focusId }) {
   }, [rating, wentWell, toImprove, questions, game, save]);
 
   if (!games.length) {
-    return <div style={PAGE}><Empty icon="✍️" text="No played games yet — reflections unlock after a match."/></div>;
+    return <div style={PAGE}><Empty icon="✍️" text="No fixtures yet."/></div>;
   }
 
   const r = RESULT[game?.result] || RESULT["—"];
@@ -102,7 +104,7 @@ export default function Reflect({ stats, journal, focusId }) {
       <select value={gameId} onChange={e => setGameId(e.target.value)}
               style={{...IS, marginBottom: 16, fontSize: 15, padding: "14px"}}>
         {games.map(g => (
-          <option key={g.id} value={g.id}>{g.date} · {g.opponent} · {g.result}</option>
+          <option key={g.id} value={g.id}>{fixtureLabel(g)}</option>
         ))}
       </select>
 
@@ -118,6 +120,14 @@ export default function Reflect({ stats, journal, focusId }) {
               <div style={{fontFamily: DISPLAY, fontSize: 26, color: r.fg, lineHeight: 1}}>{score || game.result}</div>
             </div>
           </div>
+
+          {!isPlayed(game) && game.date > todayISO() && (
+            <div style={{background:"rgba(74,124,204,.10)",border:`1px solid ${C.blue}33`,borderRadius:12,
+                         padding:"12px 14px",marginBottom:14,color:C.ink3,fontSize:13,lineHeight:1.5}}>
+              This match hasn't been played yet — you can still jot notes or questions now,
+              and fill in the rest afterwards.
+            </div>
+          )}
 
           {/* rating */}
           <div style={{...CardS, padding: "20px 16px", marginBottom: 14, ...rise(1)}}>

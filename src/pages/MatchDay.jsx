@@ -7,30 +7,19 @@ import SectionTitle from '../ui/SectionTitle.jsx';
 import Stepper from '../ui/Stepper.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import Empty from '../ui/Empty.jsx';
-import { upcoming, played, prettyDate, venueOf, isPlayed, todayISO as todayStr } from '../lib/season.js';
+import { prettyDate, venueOf, isPlayed, todayISO as todayStr,
+         fixtureChoices, fixtureLabel, defaultMatchDayFixture } from '../lib/season.js';
 import { surfaceForVenue } from '../data/venues.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { EVENT_TYPES, eventsOf, countOf } from '../lib/events.js';
 
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-// Pick the fixture this screen should open on: today's game if there is one,
-// otherwise the most recent unfinished game, otherwise the next one up.
-function defaultFixture(stats) {
-  const t = todayStr();
-  const today = stats.find(g => g.date === t);
-  if (today) return today;
-  const recentUnfinished = stats
-    .filter(g => g.date < t && !isPlayed(g))
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-  return recentUnfinished || upcoming(stats)[0] || null;
-}
-
 const resultFromScore = (f, a) =>
   f === "" || a === "" || f == null || a == null ? "—" : f > a ? "W" : f < a ? "L" : "D";
 
 export default function MatchDay({ stats, journal, focusId }) {
-  const [fixtureId, setFixtureId] = useState(() => focusId || defaultFixture(stats)?.id || "");
+  const [fixtureId, setFixtureId] = useState(() => focusId || defaultMatchDayFixture(stats)?.id || "");
   // Follow the match chosen on the Matches tab.
   useEffect(() => { if (focusId && focusId !== fixtureId) setFixtureId(focusId); }, [focusId]);
   const fixture = useMemo(() => stats.find(g => g.id === fixtureId) || null, [stats, fixtureId]);
@@ -187,7 +176,7 @@ export default function MatchDay({ stats, journal, focusId }) {
   const isToday = fixture?.date === todayStr();
 
   // Fixtures worth offering: anything near today, newest first.
-  const choices = [...stats].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
+  const choices = fixtureChoices(stats);
 
   return (
     <div style={{...PAGE, maxWidth: 620}}>
@@ -198,7 +187,7 @@ export default function MatchDay({ stats, journal, focusId }) {
               style={{...IS, marginBottom: 16, fontSize: 15, padding: "14px"}}>
         {choices.map(g => (
           <option key={g.id} value={g.id}>
-            {g.date === todayStr() ? "● TODAY — " : ""}{g.date} · {g.opponent}
+            {fixtureLabel(g)}
           </option>
         ))}
       </select>

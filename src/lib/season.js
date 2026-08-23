@@ -99,3 +99,35 @@ export function record(stats) {
     ga: p.reduce((s, g) => s + (Number(g.scoreAgainst) || 0), 0),
   };
 }
+
+// ── Fixture pickers ─────────────────────────────────────────────────────────
+// Match Day and Sebi's Review both offer the whole fixture list, newest first,
+// so today's game is always reachable. They differ only in what they open on.
+
+export const fixtureChoices = (stats, limit = 60) =>
+  [...stats].sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+
+// Label for the dropdown: "● TODAY — 2026-08-23 · FVU"
+export const fixtureLabel = (g, from = todayISO()) =>
+  `${g.date === from ? "● TODAY — " : ""}${g.date} · ${g.opponent}`;
+
+const onDate = (stats, d) => stats.find(g => g.date === d) || null;
+
+// Logging during a game: today's fixture, else a past one still unlogged,
+// else whatever is next.
+export function defaultMatchDayFixture(stats, from = todayISO()) {
+  return onDate(stats, from)
+    || stats.filter(g => g.date < from && !isPlayed(g))
+            .sort((a, b) => b.date.localeCompare(a.date))[0]
+    || upcoming(stats, from)[0]
+    || null;
+}
+
+// Reflecting afterwards: today's fixture, else the most recent one that has
+// actually happened — a future game has nothing to look back on yet.
+export function defaultReviewFixture(stats, from = todayISO()) {
+  return onDate(stats, from)
+    || [...stats].filter(g => g.date < from).sort((a, b) => b.date.localeCompare(a.date))[0]
+    || upcoming(stats, from)[0]
+    || null;
+}
