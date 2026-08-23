@@ -29,6 +29,26 @@ async function linkSpring26Journal(alreadyRun) {
   await seedRef('spring26-link').set(true);
 }
 
+// The Spring 2026 rows were seeded with position "CM", which was a placeholder
+// in the original single-file app rather than something anyone observed — he
+// played centre back. Corrects only rows still holding that untouched default,
+// so anything since edited by hand is left alone.
+async function fixSpring26Positions(alreadyRun) {
+  if (alreadyRun['sp26-position-cb']) return;
+  for (const node of ['stats', 'journal']) {
+    const rows = fbSnapToArray(await readOnce(dataRef(node)));
+    let changed = 0;
+    const next = rows.map(r => {
+      const isSpring26 = (r.id || '').startsWith('sp26-') || (r.id || '').startsWith('spj26-');
+      if (!isSpring26 || r.position !== 'CM' || r.positions?.length) return r;
+      changed += 1;
+      return { ...r, position: 'CB' };
+    });
+    if (changed > 0) await dataRef(node).set(arrayToFbObj(next));
+  }
+  await seedRef('sp26-position-cb').set(true);
+}
+
 // Seed anything the database has not seen. Every batch carries its own flag,
 // so this is safe on every load and safe to re-run after adding a season.
 //
@@ -42,4 +62,5 @@ export async function runSeedsIfNeeded() {
     await seedOnce(b.key, b.node, b.rows, alreadyRun);
   }
   await linkSpring26Journal(alreadyRun);
+  await fixSpring26Positions(alreadyRun);
 }

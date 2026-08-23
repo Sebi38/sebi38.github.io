@@ -122,15 +122,24 @@ export default function MatchDay({ stats, journal }) {
     const allJournal = ld(SK.journal) || [];
     const existing = allJournal.find(e => e.statId === fixture.id || e.date === fixture.date);
     const freeform = m.join("\n");
+    const matchFacts = {
+      goals, assists, minutes, started,
+      positions: playedPositions,
+      position: playedPositions[0] || fixture.position || "CB",
+      ...(scoreTouched.current
+        ? { scoreFor: sf, scoreAgainst: sa, result: resultFromScore(sf, sa) }
+        : {}),
+    };
+
     if (existing) {
       sv(SK.journal, allJournal.map(e => e.id === existing.id
-        ? { ...e, freeform, statId: fixture.id } : e));
-    } else if (freeform) {
+        ? { ...e, ...matchFacts, freeform, statId: fixture.id } : e));
+    } else if (freeform || scoreTouched.current) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
         location: fixture.notes || "", surface: "grass",
-        position: playedPositions[0] || fixture.position || "CB",
         wentWell: "", toImprove: "", rating: 5, freeform, statId: fixture.id,
+        ...matchFacts,
       }, ...allJournal]);
     }
     setStatus("saved");

@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { SK, POS } from '../config.js';
+import { SEASONS, filterBySeason } from '../data/seasons.js';
+import { todayISO, isPlayed } from '../lib/season.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue, scoreLine } from '../lib/numbers.js';
-import { IS, LS, BP, BS, CardS, H2, PAGE, rC, RESULT_COLORS } from '../ui/theme.js';
+import { C, IS, LS, BP, BS, CardS, H2, PAGE, rC, RESULT_COLORS } from '../ui/theme.js';
 import Empty from '../ui/Empty.jsx';
 import Modal from '../ui/Modal.jsx';
 import SearchBar from '../ui/SearchBar.jsx';
+import Pill from '../ui/Pill.jsx';
 
-const EMPTY_FORM = {date:"",opponent:"",location:"",surface:"grass",position:"CM",result:"—",scoreFor:"",scoreAgainst:"",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",statId:null,wentWell:"",toImprove:"",rating:5,freeform:"",takaLink:"",veoLink:""};
+const EMPTY_FORM = {date:"",opponent:"",location:"",surface:"grass",position:"CB",positions:["","",""],started:null,result:"—",scoreFor:"",scoreAgainst:"",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,takaPos:"",takaNeg:"",statId:null,wentWell:"",toImprove:"",rating:5,freeform:"",takaLink:"",veoLink:""};
 
 const SectionLabel = ({ children, first }) => (
   <div style={{color:"#4a7ccc",fontSize:11,fontWeight:700,letterSpacing:2,paddingBottom:6,borderBottom:"1px solid #1a2540",marginTop:first?0:4}}>{children}</div>
@@ -18,16 +21,47 @@ export default function Journal() {
   const [showAdd, setShowAdd] = useState(false);
   const [expId, setExp] = useState(null);
   const [search, setSearch] = useState("");
+  const [season, setSeason] = useState("all");
+  // Default to games that have happened — an unplayed fixture has nothing to
+  // reflect on, and 30+ future stubs used to bury this weekend's match.
+  const [view, setView] = useState("played");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
 
   const persist = u => { setEntries(u); sv(SK.journal, u); };
+
+  // The stat row is authoritative for what happened in the match; the journal
+  // entry owns the reflection. Merge the two for display so a score entered on
+  // Match Day shows here without being copied twice.
+  const stats = useMemo(() => ld(SK.stats) || [], [entries, showAdd]);
+  const merged = useMemo(() => entries.map(e => {
+    const st = stats.find(x => x.id === e.statId);
+    if (!st) return e;
+    const pick = (a, b) => (a !== "" && a != null ? a : b);
+    return {
+      ...e,
+      result:       pick(e.result, st.result),
+      scoreFor:     pick(e.scoreFor, st.scoreFor),
+      scoreAgainst: pick(e.scoreAgainst, st.scoreAgainst),
+      minutes:      e.minutes || st.minutes,
+      goals:        e.goals   || st.goals,
+      assists:      e.assists || st.assists,
+      positions:    (e.positions?.length ? e.positions : st.positions) || [],
+      position:     e.position || st.position,
+      started:      typeof e.started === "boolean" ? e.started : st.started,
+      _date:        e.date || st.date,
+    };
+  }), [entries, stats]);
 
   // Saving a journal entry also writes a matching row into Stats, linked by
   // statId, so the two tabs stay in step.
   const doSave = () => {
     if (!form.date || !form.opponent) return;
     const p = normalizeStatForm(form);
+    const playedPositions = (form.positions || []).filter(Boolean);
+    p.positions = playedPositions;
+    p.position = playedPositions[0] || form.position || "CB";
+    p.started = form.started;
 
     const allStats = ld(SK.stats) || [];
     let sid = p.statId;
@@ -36,6 +70,7 @@ export default function Journal() {
       goals:p.goals, assists:p.assists, shots:p.shots, sot:p.sot, passes:p.passes,
       tackles:p.tackles, result:p.result, scoreFor:p.scoreFor, scoreAgainst:p.scoreAgainst,
       notes:p.location||"", takaPos:p.takaPos, takaNeg:p.takaNeg,
+      positions:p.positions, started:p.started,
     };
 
     if (sid) {
@@ -55,7 +90,12 @@ export default function Journal() {
   const edit = e => {
     setForm({
       date:e.date, opponent:e.opponent, location:e.location||"", surface:e.surface||"grass",
-      position:e.position||"CM", result:e.result||"—",
+      position:e.position||"CB", result:e.result||"—",
+      positions:(() => {
+        const src = e.positions?.length ? e.positions : (e.position ? [e.position] : []);
+        return [src[0]||"", src[1]||"", src[2]||""];
+      })(),
+      started: typeof e.started === "boolean" ? e.started : null,
       scoreFor:e.scoreFor!=null?e.scoreFor:"", scoreAgainst:e.scoreAgainst!=null?e.scoreAgainst:"",
       minutes:e.minutes||0, goals:e.goals||0, assists:e.assists||0, shots:e.shots||0,
       sot:e.sot||0, passes:e.passes||0, tackles:e.tackles||0,
@@ -74,15 +114,33 @@ export default function Journal() {
     persist(entries.filter(x => x.id !== id));
   };
 
+  const counts = useMemo(() => {
+    const t = todayISO();
+    const scoped = filterBySeason(merged, season);
+    return {
+      played:   scoped.filter(e => isPlayed(e) || e.date <= t).length,
+      upcoming: scoped.filter(e => !isPlayed(e) && e.date > t).length,
+    };
+  }, [merged, season]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return entries;
-    const s = search.toLowerCase();
-    return entries.filter(e =>
-      e.opponent.toLowerCase().includes(s) ||
-      (e.location||"").toLowerCase().includes(s) ||
-      e.date.includes(s) ||
-      (e.position||"").toLowerCase().includes(s));
-  }, [entries, search]);
+    const t = todayISO();
+    let f = filterBySeason(merged, season);
+    if (view === "played")   f = f.filter(e => isPlayed(e) || e.date <= t);
+    if (view === "upcoming") f = f.filter(e => !isPlayed(e) && e.date > t);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      f = f.filter(e =>
+        e.opponent.toLowerCase().includes(q) ||
+        (e.location||"").toLowerCase().includes(q) ||
+        e.date.includes(q) ||
+        (e.positions||[]).join(" ").toLowerCase().includes(q) ||
+        (e.position||"").toLowerCase().includes(q));
+    }
+    // Most recent first for played games; soonest first for upcoming ones.
+    return [...f].sort((a, b) =>
+      view === "upcoming" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+  }, [merged, season, view, search]);
 
   const num = (label, key, extra = {}) => (
     <div>
@@ -97,7 +155,27 @@ export default function Journal() {
         <h2 style={H2}>📝 GAME JOURNAL</h2>
         <button onClick={()=>{setForm(EMPTY_FORM);setEditId(null);setShowAdd(true)}} style={BP}>+ New Entry</button>
       </div>
-      <div style={{marginBottom:24}}><SearchBar value={search} onChange={setSearch} placeholder="Search opponent, location, position..."/></div>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        {SEASONS.map(s=>(
+          <Pill key={s.id} label={s.label} active={season===s.id} onClick={()=>setSeason(s.id)}/>
+        ))}
+        <Pill label="All" active={season==="all"} onClick={()=>setSeason("all")}/>
+      </div>
+
+      <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",background:C.surface,borderRadius:12,
+                     border:`1px solid ${C.line}`,overflow:"hidden",width:"fit-content"}}>
+          {[{v:"played",l:`Played (${counts.played})`},
+            {v:"upcoming",l:`Upcoming (${counts.upcoming})`},
+            {v:"all",l:"All"}].map(t=>(
+            <button key={t.v} onClick={()=>setView(t.v)}
+              style={{padding:"9px 16px",background:view===t.v?"#1a2f5a":"none",border:"none",
+                      color:view===t.v?C.ink:C.muted,fontSize:12.5,fontWeight:view===t.v?700:500,
+                      cursor:"pointer",fontFamily:"'Outfit',sans-serif",transition:"all .2s"}}>{t.l}</button>
+          ))}
+        </div>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search opponent, venue, position..."/>
+      </div>
 
       {filtered.length===0
         ? <Empty icon="✍️" text={search?"No matching entries.":"No journal entries yet."}/>
@@ -113,7 +191,7 @@ export default function Journal() {
                     <span style={{color:"#fff",fontWeight:700,fontSize:15}}>vs {e.opponent}</span>
                     {e.result&&e.result!=="—"&&<span style={{color:RESULT_COLORS[e.result],fontWeight:700,background:RESULT_COLORS[e.result]+"22",padding:"1px 8px",borderRadius:5,fontSize:12}}>{e.result}{score?" "+score:""}</span>}
                   </div>
-                  <div style={{color:"#5a6a8a",fontSize:13,marginTop:2}}>{e.date} · {e.location} · {e.surface==="turf"?"🏟 Turf":"🌱 Grass"}{e.position&&<span> · <span style={{color:"#4a7ccc"}}>{e.position}</span></span>}{(e.goals>0||e.assists>0)&&<span style={{color:"#e63946"}}> · {e.goals}G {e.assists}A</span>}</div>
+                  <div style={{color:"#5a6a8a",fontSize:13,marginTop:2}}>{e.date} · {e.location} · {e.surface==="turf"?"🏟 Turf":"🌱 Grass"}{(e.positions?.length||e.position)&&<span> · <span style={{color:"#4a7ccc"}}>{e.positions?.length?e.positions.join(" → "):e.position}</span></span>}{(e.goals>0||e.assists>0)&&<span style={{color:"#e63946"}}> · {e.goals}G {e.assists}A</span>}</div>
                 </div>
                 <span style={{color:"#3a4560",fontSize:18,transition:"transform 0.2s",transform:expId===e.id?"rotate(180deg)":"rotate(0)"}}>▼</span>
               </div>
@@ -159,13 +237,39 @@ export default function Journal() {
             <div><label style={LS}>Date</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={IS}/></div>
             <div><label style={LS}>Opponent</label><input value={form.opponent} onChange={e=>setForm({...form,opponent:e.target.value})} placeholder="e.g. Solar SC" style={IS}/></div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
             <div><label style={LS}>Location</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="e.g. Witter Field" style={IS}/></div>
             <div><label style={LS}>Surface</label><select value={form.surface} onChange={e=>setForm({...form,surface:e.target.value})} style={IS}><option value="grass">🌱 Grass</option><option value="turf">🏟 Turf</option></select></div>
-            <div><label style={LS}>Position</label><select value={form.position} onChange={e=>setForm({...form,position:e.target.value})} style={IS}>{POS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+          </div>
+          <div>
+            <div>
+              <label style={LS}>Positions played <span style={{color:"#3a4560",fontWeight:400}}>— 2nd and 3rd only if he moved</span></label>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+                {[0,1,2].map(i=>(
+                  <select key={i} value={form.positions?.[i]||""}
+                          onChange={e=>setForm({...form,positions:(form.positions||["","",""]).map((v,j)=>j===i?e.target.value:v)})}
+                          style={{...IS,padding:"12px 6px",textAlign:"center",textAlignLast:"center"}}>
+                    <option value="">—</option>
+                    {POS.map(o=><option key={o} value={o}>{o}</option>)}
+                  </select>
+                ))}
+              </div>
+            </div>
           </div>
 
           <SectionLabel>GAME STATS</SectionLabel>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
+            <div>
+              <label style={LS}>Started</label>
+              <select value={form.started === null || form.started === undefined ? "" : String(form.started)}
+                      onChange={e=>setForm({...form,started:e.target.value===""?null:e.target.value==="true"})}
+                      style={IS}>
+                <option value="">— Not recorded</option>
+                <option value="true">Yes — started</option>
+                <option value="false">No — off the bench</option>
+              </select>
+            </div>
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
             <div><label style={LS}>Result</label><select value={form.result} onChange={e=>setForm({...form,result:e.target.value})} style={IS}><option value="—">— Upcoming</option><option value="W">W – Win</option><option value="D">D – Draw</option><option value="L">L – Loss</option></select></div>
             {num("Score For","scoreFor",{placeholder:"Our goals"})}
