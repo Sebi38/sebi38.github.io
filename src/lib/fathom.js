@@ -10,9 +10,28 @@
 // "Meeting Summary" with Meeting Purpose / Key Takeaways / Topics / Next Steps.
 // The expanded section is the one worth reading, so that is what we parse.
 
+// Fathom recaps arrive in two shapes depending on how they were forwarded:
+//
+//   Gmail on the web — plain text, <https://…> links, "-" bullets on their own
+//   lines, hard-wrapped at ~72 characters.
+//
+//   Forwarded from an iPhone — markdown: "##"/"###" headings, "*" bullets run
+//   together on one long line, []( … ) links, and "| |" table scaffolding.
+//
+// Both are normalised to one shape here so the rest of the parser only has to
+// understand a single format.
 const stripLinks = t => t
-  .replace(/<https?:\/\/[^>]*>/g, "")        // the angle-bracketed fathom links
+  .replace(/<https?:\/\/[^>]*>/g, "")        // angle-bracketed links
+  .replace(/\[[^\]]*\]\(https?:\/\/[^)]*\)/g, "")  // markdown links
   .replace(/\[image:[^\]]*\]/g, "");
+
+const normalise = t => t
+  .replace(/^\s*\|[\s|-]*$/gm, "")            // empty table rows
+  .replace(/^\s*\|\s?/gm, "")                 // leading table pipes
+  .replace(/\s\|\s*$/gm, "")                  // trailing pipes
+  .replace(/\s*###?\s+/g, "\n")               // markdown headings -> line breaks
+  .replace(/\s+\*\s+/g, "\n- ")              // markdown bullets -> dash bullets
+  .replace(/\n{3,}/g, "\n\n");
 
 const clean = t => t
   .replace(/\*/g, "")                         // Fathom's *bold* markers
@@ -50,10 +69,18 @@ function section(text, start, ends) {
 // lines — split on the markers and rejoin each chunk, or every wrapped line
 // becomes its own fragment.
 function bullets(block) {
-  return block
-    .split(/\n\s*-\s*(?=\n|$)/)          // the lone "-" separators
-    .map(chunk => chunk.split("\n").map(l => clean(l)).filter(Boolean).join(" "))
-    .map(t => clean(t).replace(/^-\s*/, "").trim())
+  const out = [];
+  for (const rawLine of block.split("\n")) {
+    const line = clean(rawLine);
+    if (!line) continue;
+    if (line === "-") { out.push(""); continue; }      // lone separator: start a bullet
+    if (/^-\s+/.test(line)) { out.push(line.replace(/^-\s+/, "")); continue; }
+    // A continuation of the bullet above — the email wrapped it.
+    if (out.length) out[out.length - 1] = (out[out.length - 1] + " " + line).trim();
+    else out.push(line);
+  }
+  return out
+    .map(t => clean(t))
     // Drop the bare owner headings ("Sebi:", "Yannick:") that label a group.
     .filter(t => t.length > 3 && !/^(Sebi|Yannick|Marina|Sean)\s*:?$/i.test(t));
 }
@@ -67,18 +94,45 @@ function parseActionItems(raw) {
   const block = section(raw, "Action Items", ["Meeting Summary"]);
   if (!block) return [];
   return block
-    .split(/<https?:\/\/[^>]*>/)
+    // Either link syntax ends an item; the owner's name follows it.
+    .split(/<https?:\/\/[^>]*>|\[[^\]]*\]\(https?:\/\/[^)]*\)/)
     .map(chunk => chunk.split("\n")
-      .map(l => clean(l).replace(/^✨\s*/, "").trim())
-      .filter(l => l && !NAME_LINE.test(l))     // drop the owner's name
+      .map(l => clean(l)
+        .replace(/^\|+\s*/, "").replace(/\s*\|+$/, "")   // markdown table pipes
+        .replace(/^✨\s*/, "").trim())
+      .filter(l => l && l !== "|" && !NAME_LINE.test(l))  // drop the owner's name
       .join(" "))
-    .map(t => clean(t))
+    .map(t => clean(t).replace(/^\|+\s*/, "").replace(/\s*\|+$/, "").trim())
     .filter(t => t.length > 3);
+}
+
+// A bundle is several already-parsed sessions in one JSON payload, so a
+// backlog can be brought in with a single paste instead of one email at a time.
+export function parseBundle(raw) {
+  const t = (raw || "").trim();
+  if (!t.startsWith("{") && !t.startsWith("[")) return null;
+  try {
+    const data = JSON.parse(t);
+    const list = Array.isArray(data) ? data : data.sessions;
+    if (!Array.isArray(list) || !list.length) return null;
+    return list
+      .filter(s => s && (s.shareUrl || s.date || s.takeaways?.length))
+      .map(s => ({
+        ok: true, error: "",
+        date: s.date || "", minutes: s.minutes ?? null,
+        shareUrl: s.shareUrl || "", title: s.title || "GIKA10 session",
+        purpose: s.purpose || "",
+        takeaways: s.takeaways || [], topics: s.topics || [],
+        nextSteps: s.nextSteps || [], actionItems: s.actionItems || [],
+      }));
+  } catch {
+    return null;
+  }
 }
 
 export function parseFathomRecap(raw) {
   if (!raw || !raw.trim()) return { ok: false, error: "Nothing pasted." };
-  const text = stripLinks(raw);
+  const text = normalise(stripLinks(raw));
 
   const share = raw.match(/https:\/\/fathom\.video\/share\/([A-Za-z0-9_-]+)/);
   const { date, minutes } = parseMeta(text);

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { SK } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
-import { parseFathomRecap, findStats } from '../lib/fathom.js';
+import { parseFathomRecap, parseBundle, findStats } from '../lib/fathom.js';
 import { prettyDate } from '../lib/season.js';
 import { C, CardS, DISPLAY, BODY, IS, LS, BP, BS, RESULT, rise } from '../ui/theme.js';
 import Empty from '../ui/Empty.jsx';
@@ -35,9 +35,28 @@ export default function CoachingSessions() {
   const ordered = useMemo(
     () => [...sessions].sort((a,b) => (b.date||"").localeCompare(a.date||"")), [sessions]);
 
+  // Accepts either one pasted recap email or a bundle of already-parsed ones.
+  const [batch, setBatch] = useState(null);
   const doParse = text => {
     setRaw(text);
-    setPreview(text.trim() ? parseFathomRecap(text) : null);
+    if (!text.trim()) { setPreview(null); setBatch(null); return; }
+    const bundle = parseBundle(text);
+    if (bundle) { setBatch(bundle); setPreview(null); return; }
+    setBatch(null);
+    setPreview(parseFathomRecap(text));
+  };
+
+  const saveMany = () => {
+    if (!batch?.length) return;
+    let next = [...sessions];
+    for (const row of batch) {
+      const dupe = next.find(s =>
+        (row.shareUrl && s.shareUrl === row.shareUrl) || (!row.shareUrl && s.date === row.date));
+      const withId = { ...row, id: dupe?.id || gid(), importedAt: new Date().toISOString() };
+      next = dupe ? next.map(s => s.id === dupe.id ? withId : s) : [withId, ...next];
+    }
+    persist(next);
+    setImporting(false); setRaw(""); setPreview(null); setBatch(null);
   };
 
   const save = () => {
@@ -153,11 +172,27 @@ export default function CoachingSessions() {
               public code.
             </p>
             <textarea value={raw} onChange={e=>doParse(e.target.value)} rows={8}
-                      placeholder="Paste the whole recap email here…"
+                      placeholder="Paste a recap email — or the whole bundle file — here…"
                       style={{...IS,resize:"vertical",fontSize:13,lineHeight:1.5,fontFamily:"monospace"}}/>
 
             {preview && !preview.ok && (
               <div style={{color:RESULT.L.fg,fontSize:13}}>{preview.error}</div>
+            )}
+
+            {batch?.length > 0 && (
+              <div style={{...CardS,padding:"16px 18px"}}>
+                <div style={{color:RESULT.W.fg,fontSize:11.5,fontWeight:800,letterSpacing:1.4,marginBottom:10}}>
+                  ✓ BUNDLE — {batch.length} SESSIONS
+                </div>
+                <div style={{display:"grid",gap:5}}>
+                  {batch.map((b,i)=>(
+                    <div key={i} style={{color:C.ink2,fontSize:13}}>
+                      {b.date ? prettyDate(b.date) : "undated"}
+                      <span style={{color:C.muted}}> · {b.takeaways.length} takeaways · {b.actionItems.length} actions</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {preview?.ok && (
@@ -183,9 +218,10 @@ export default function CoachingSessions() {
             )}
 
             <div style={{display:"flex",gap:12}}>
-              <button onClick={save} disabled={!preview?.ok}
-                      style={{...BP,opacity:preview?.ok?1:.45,cursor:preview?.ok?"pointer":"default"}}>
-                Import session
+              <button onClick={batch?.length ? saveMany : save} disabled={!batch?.length && !preview?.ok}
+                      style={{...BP,opacity:(batch?.length||preview?.ok)?1:.45,
+                              cursor:(batch?.length||preview?.ok)?"pointer":"default"}}>
+                {batch?.length ? `Import ${batch.length} sessions` : "Import session"}
               </button>
               <button onClick={()=>setImporting(false)} style={BS}>Cancel</button>
             </div>
