@@ -47,6 +47,7 @@ const NODE_MAP = {
   highlights: SK.highlights,
   training: SK.training,
   trainRes: SK.trainRes,
+  coaching: SK.coaching,
   journal: SK.journal,
   stats: SK.stats,
 };

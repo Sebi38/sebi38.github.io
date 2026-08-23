@@ -8,6 +8,7 @@ import Pill from '../ui/Pill.jsx';
 import SearchBar from '../ui/SearchBar.jsx';
 import ViewToggle from '../ui/ViewToggle.jsx';
 import ResourceList from './ResourceList.jsx';
+import CoachingSessions from './CoachingSessions.jsx';
 
 const EMPTY_FORM = {title:"",link:"",category:CATS[0],notes:""};
 
@@ -52,7 +53,7 @@ export default function Training() {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <h2 style={H2}>📚 TRAINING</h2>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <ViewToggle view={view} setView={setView} options={[{v:"drills",l:"My Drills"},{v:"resources",l:"Resources"}]}/>
+          <ViewToggle view={view} setView={setView} options={[{v:"drills",l:"My Drills"},{v:"resources",l:"Resources"},{v:"coaching",l:"Coaching"}]}/>
           {view==="drills"&&<button onClick={()=>{setForm(EMPTY_FORM);setEditId(null);setShowAdd(true)}} style={BP}>+ Add Drill</button>}
         </div>
       </div>
@@ -89,6 +90,7 @@ export default function Training() {
           </div></Modal>}
       </>}
 
+      {view==="coaching"&&<CoachingSessions/>}
       {view==="resources"&&<ResourceList storageKey={SK.trainRes} categories={TRAIN_RES_CATS} emptyIcon="🔗" placeholder="Search training resources..." addLabel="Add Resource" modalTitle="Training Resource"/>}
     </div>
   );

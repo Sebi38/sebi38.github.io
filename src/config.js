@@ -30,6 +30,7 @@ export const SK = {
   highlights: "seb38-highlights",
   training: "seb38-training",
   trainRes: "seb38-train-res",
+  coaching: "seb38-coaching",
   journal: "seb38-journal",
   stats: "seb38-stats",
 };
@@ -40,6 +41,7 @@ export const SK_TO_FB = {
   [SK.highlights]: "highlights",
   [SK.training]: "training",
   [SK.trainRes]: "trainRes",
+  [SK.coaching]: "coaching",
   [SK.journal]: "journal",
   [SK.stats]: "stats",
 };
