@@ -11,6 +11,7 @@ import { played, prettyDate, isPlayed } from '../lib/season.js';
 const PROMPTS = [
   "What did I do well today?",
   "What do I want to be better at?",
+  "Questions for my coaches",
 ];
 
 export default function Reflect({ stats, journal }) {
@@ -27,12 +28,14 @@ export default function Reflect({ stats, journal }) {
   const [rating, setRating] = useState(5);
   const [wentWell, setWentWell] = useState("");
   const [toImprove, setToImprove] = useState("");
+  const [questions, setQuestions] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setRating(entry?.rating ?? 5);
     setWentWell(entry?.wentWell || "");
     setToImprove(entry?.toImprove || "");
+    setQuestions(entry?.questionsForCoaches || "");
     setSaved(false);
   }, [gameId, entry?.id]);
 
@@ -41,12 +44,12 @@ export default function Reflect({ stats, journal }) {
     const all = ld(SK.journal) || [];
     if (entry) {
       sv(SK.journal, all.map(e => e.id === entry.id
-        ? { ...e, rating, wentWell, toImprove, statId: game.id } : e));
+        ? { ...e, rating, wentWell, toImprove, questionsForCoaches: questions, statId: game.id } : e));
     } else {
       sv(SK.journal, [{
         id: gid(), date: game.date, opponent: game.opponent, location: game.notes || "",
         surface: "grass", position: game.position || "CB",
-        wentWell, toImprove, rating, freeform: "", statId: game.id,
+        wentWell, toImprove, questionsForCoaches: questions, rating, moments: [], statId: game.id,
       }, ...all]);
     }
     setSaved(true);
@@ -73,7 +76,7 @@ export default function Reflect({ stats, journal }) {
 
   return (
     <div style={{...PAGE, maxWidth: 620}}>
-      <SectionTitle>MY MATCH</SectionTitle>
+      <SectionTitle>SEBI'S MATCH DAY REVIEW</SectionTitle>
 
       <select value={gameId} onChange={e => setGameId(e.target.value)}
               style={{...IS, marginBottom: 16, fontSize: 15, padding: "14px"}}>
@@ -114,6 +117,7 @@ export default function Reflect({ stats, journal }) {
 
           {field(PROMPTS[0], wentWell, setWentWell, "One or two things. Be specific — “won my headers” beats “played well”.")}
           {field(PROMPTS[1], toImprove, setToImprove, "One thing to take into training this week.")}
+          {field(PROMPTS[2], questions, setQuestions, "Anything you want to ask Coach — positioning, a decision you were unsure about, what to work on.")}
 
           <button type="button" onClick={save}
                   style={{...BP, width: "100%", padding: "16px", fontSize: 15,

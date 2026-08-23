@@ -102,7 +102,7 @@ export default function Home({ stats, journal, setPage }) {
         {recentGames.length>0 && (
           <>
             <SectionTitle right={
-              <button onClick={()=>setPage?.("schedule")} style={{background:"none",border:"none",color:C.blue,
+              <button onClick={()=>setPage?.("matches")} style={{background:"none",border:"none",color:C.blue,
                 fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:BODY}}>Full schedule →</button>
             }>RECENT</SectionTitle>
             <div style={{display:"grid",gap:10,marginBottom:44}}>

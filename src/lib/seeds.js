@@ -3,6 +3,7 @@ import { SEED_BATCHES } from '../data/seasons.js';
 import { fbSnapToArray, arrayToFbObj } from './storage.js';
 import { readOnce } from './net.js';
 import { surfaceForVenue } from '../data/venues.js';
+import { toMoments } from './moments.js';
 
 const seedRef = key => db.ref(`${ROOT}/seeds/${key}`);
 const dataRef = node => db.ref(`${ROOT}/data/${node}`);
@@ -68,6 +69,25 @@ async function applyVenueSurfaces(alreadyRun) {
   await seedRef('venue-surface-1').set(true);
 }
 
+// Match moments used to be one blob of text in `freeform`, one moment per
+// line. They are now structured so each can be ticked off after being seen on
+// film. Converts in place; `freeform` is left as it was so nothing is
+// destroyed if this ever needs revisiting.
+async function migrateMoments(alreadyRun) {
+  if (alreadyRun['moments-structured-1']) return;
+  const rows = fbSnapToArray(await readOnce(dataRef('journal')));
+  let changed = 0;
+  const next = rows.map(r => {
+    if (Array.isArray(r.moments) && r.moments.length) return r;
+    const moments = toMoments(r.freeform);
+    if (!moments.length) return r;
+    changed += 1;
+    return { ...r, moments };
+  });
+  if (changed > 0) await dataRef('journal').set(arrayToFbObj(next));
+  await seedRef('moments-structured-1').set(true);
+}
+
 // Seed anything the database has not seen. Every batch carries its own flag,
 // so this is safe on every load and safe to re-run after adding a season.
 //
@@ -83,4 +103,5 @@ export async function runSeedsIfNeeded() {
   await linkSpring26Journal(alreadyRun);
   await fixSpring26Positions(alreadyRun);
   await applyVenueSurfaces(alreadyRun);
+  await migrateMoments(alreadyRun);
 }

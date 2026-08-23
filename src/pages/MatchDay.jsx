@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { SK, POS } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
+import { hasValue } from '../lib/numbers.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Stepper from '../ui/Stepper.jsx';
@@ -8,6 +9,7 @@ import Segmented from '../ui/Segmented.jsx';
 import Empty from '../ui/Empty.jsx';
 import { upcoming, played, prettyDate, splitVenue, isPlayed, todayISO as todayStr } from '../lib/season.js';
 import { surfaceForVenue } from '../data/venues.js';
+import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -39,6 +41,8 @@ export default function MatchDay({ stats, journal }) {
   const [positions, setPositions] = useState(["", "", ""]);
   // null = not recorded yet, so a blank fixture isn't claimed as "did not start".
   const [started, setStarted] = useState(null);
+  const [venueText, setVenueText] = useState("");
+  const [surface, setSurface] = useState("grass");
   const [moment, setMoment] = useState("");
   const [moments, setMoments] = useState([]);
   const [status, setStatus] = useState("");      // "saving" | "saved" | ""
@@ -48,6 +52,7 @@ export default function MatchDay({ stats, journal }) {
   const touched = useRef(false);
   // A 0–0 scoreline is only a draw once someone has touched the score.
   const scoreTouched = useRef(false);
+  const [scoreDirty, setScoreDirty] = useState(false);
   // Suppress the autosave effect while a fixture's saved values load in.
   const loading = useRef(false);
 
@@ -57,9 +62,13 @@ export default function MatchDay({ stats, journal }) {
     loading.current = true;
     touched.current = false;
     scoreTouched.current = false;
+    setScoreDirty(false);
     setGoals(fixture.goals || 0);
     setAssists(fixture.assists || 0);
     setSf(Number(fixture.scoreFor) || 0);
+    if (hasValue(fixture.scoreFor) && hasValue(fixture.scoreAgainst)) {
+      scoreTouched.current = true; setScoreDirty(true);
+    }
     setSa(Number(fixture.scoreAgainst) || 0);
     setMinutes(fixture.minutes || 0);
     const existing = Array.isArray(fixture.positions) && fixture.positions.length
@@ -67,8 +76,11 @@ export default function MatchDay({ stats, journal }) {
       : (fixture.position ? [fixture.position] : []);
     setPositions([existing[0] || "", existing[1] || "", existing[2] || ""]);
     setStarted(typeof fixture.started === "boolean" ? fixture.started : null);
+    setVenueText(fixture.notes || "");
+    const j0 = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
+    setSurface(j0?.surface || surfaceForVenue(fixture.notes || "") || "grass");
     const j = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
-    setMoments(j?.freeform ? j.freeform.split("\n").filter(Boolean) : []);
+    setMoments(momentsOf(j));
     setStatus("");
     setSavedAt(null);
     // Let this render settle before autosave starts watching.
@@ -78,16 +90,16 @@ export default function MatchDay({ stats, journal }) {
 
   // Wrap the setters so any real edit arms the autosave.
   const edit = fn => v => { touched.current = true; fn(v); };
-  const editScore = fn => v => { touched.current = true; scoreTouched.current = true; fn(v); };
+  const editScore = fn => v => { touched.current = true; scoreTouched.current = true; setScoreDirty(true); fn(v); };
 
-  const result = resultFromScore(sf, sa);
+  const result = scoreDirty ? resultFromScore(sf, sa) : "—";
   const r = RESULT[result] || RESULT["—"];
 
   // Moments write straight through rather than waiting for the debounce —
   // they are the thing most easily lost, and each one is a discrete event.
   const addMoment = () => {
     if (!moment.trim()) return;
-    const next = [...moments, `${clockNow()} — ${moment.trim()}`];
+    const next = [...moments, { id: momentId(), t: clockNow(), text: moment.trim(), reviewed: false }];
     touched.current = true;
     setMoments(next);
     setMoment("");
@@ -112,7 +124,7 @@ export default function MatchDay({ stats, journal }) {
       ? { ...st, goals, assists, minutes,
           positions: playedPositions,
           position: playedPositions[0] || st.position || "",
-          started,
+          started, notes: venueText,
           // Leave the score and result alone until someone has touched them,
           // so an untouched fixture is never recorded as a 0–0 draw.
           ...(scoreTouched.current
@@ -122,11 +134,12 @@ export default function MatchDay({ stats, journal }) {
 
     const allJournal = ld(SK.journal) || [];
     const existing = allJournal.find(e => e.statId === fixture.id || e.date === fixture.date);
-    const freeform = m.join("\n");
+    const momentList = m;
     const matchFacts = {
       goals, assists, minutes, started,
       positions: playedPositions,
       position: playedPositions[0] || fixture.position || "CB",
+      location: venueText, surface,
       ...(scoreTouched.current
         ? { scoreFor: sf, scoreAgainst: sa, result: resultFromScore(sf, sa) }
         : {}),
@@ -134,12 +147,13 @@ export default function MatchDay({ stats, journal }) {
 
     if (existing) {
       sv(SK.journal, allJournal.map(e => e.id === existing.id
-        ? { ...e, ...matchFacts, freeform, statId: fixture.id } : e));
-    } else if (freeform || scoreTouched.current) {
+        ? { ...e, ...matchFacts, moments: momentList, freeform: "", statId: fixture.id } : e));
+    } else if (momentList.length || scoreTouched.current) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
-        location: fixture.notes || "", surface: surfaceForVenue(fixture.notes || "") || "grass",
-        wentWell: "", toImprove: "", rating: 5, freeform, statId: fixture.id,
+        location: venueText, surface,
+        wentWell: "", toImprove: "", questionsForCoaches: "", rating: 5,
+        moments: momentList, statId: fixture.id,
         ...matchFacts,
       }, ...allJournal]);
     }
@@ -160,7 +174,7 @@ export default function MatchDay({ stats, journal }) {
     return <div style={PAGE}><Empty icon="⚽" text="No fixtures yet."/></div>;
   }
 
-  const { venue, time } = fixture ? splitVenue(fixture.notes || "") : {};
+  const { venue, time } = fixture ? splitVenue(venueText || fixture.notes || "") : {};
   const isToday = fixture?.date === todayStr();
 
   // Fixtures worth offering: anything near today, newest first.
@@ -196,6 +210,19 @@ export default function MatchDay({ stats, journal }) {
                 {[time, venue].filter(Boolean).join(" · ")}
               </div>
             )}
+          </div>
+
+          {/* where — editable at the field, because the venue on the
+              calendar is often wrong and the surface is only known on arrival */}
+          <div style={{...CardS, padding: "16px", marginBottom: 14, ...rise(0)}}>
+            <label style={LS}>Location</label>
+            <input value={venueText}
+                   onChange={e => { touched.current = true; setVenueText(e.target.value); }}
+                   placeholder="e.g. Witter Field · 2:15 PM"
+                   style={{...IS, marginBottom: 12}}/>
+            <Segmented label="Surface" value={surface} accent={C.teal}
+                       onChange={v => { touched.current = true; setSurface(v); }}
+                       options={[{v:"grass",l:"🌱 Grass"},{v:"turf",l:"🏟 Turf"}]}/>
           </div>
 
           {/* score */}
@@ -276,7 +303,7 @@ export default function MatchDay({ stats, journal }) {
             {moments.length > 0 && (
               <div style={{marginTop: 12, display: "grid", gap: 6}}>
                 {moments.map((m, i) => (
-                  <div key={i} style={{display: "flex", gap: 8, alignItems: "flex-start",
+                  <div key={m.id || i} style={{display: "flex", gap: 8, alignItems: "flex-start",
                                        background: C.bg, borderRadius: 8, padding: "8px 10px"}}>
                     <span style={{color: C.ink2, fontSize: 13, lineHeight: 1.5, flex: 1}}>{m}</span>
                     <button type="button" onClick={() => removeMoment(i)}

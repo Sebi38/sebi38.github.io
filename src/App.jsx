@@ -7,13 +7,11 @@ import { todayISO } from './lib/season.js';
 import Nav from './ui/Nav.jsx';
 import SignIn from './pages/SignIn.jsx';
 import Home from './pages/Home.jsx';
-import Schedule from './pages/Schedule.jsx';
+import Matches from './pages/Matches.jsx';
 import MatchDay from './pages/MatchDay.jsx';
 import Reflect from './pages/Reflect.jsx';
 import Highlights from './pages/Highlights.jsx';
 import Training from './pages/Training.jsx';
-import Journal from './pages/Journal.jsx';
-import Stats from './pages/Stats.jsx';
 
 // Tabs are addressable as #matchday, #schedule, … so the back button works,
 // a refresh keeps your place, and a home-screen icon can point at one.
@@ -24,13 +22,11 @@ const readHash = () => {
 
 const PAGES = {
   home: Home,
-  schedule: Schedule,
+  matches: Matches,
   matchday: MatchDay,
   reflect: Reflect,
   highlights: Highlights,
   training: Training,
-  journal: Journal,
-  stats: Stats,
 };
 
 // Shown when the database could not be reached. The app keeps working from
