@@ -7,6 +7,7 @@ import Stepper from '../ui/Stepper.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import Empty from '../ui/Empty.jsx';
 import { upcoming, played, prettyDate, splitVenue, isPlayed, todayISO as todayStr } from '../lib/season.js';
+import { surfaceForVenue } from '../data/venues.js';
 
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -137,7 +138,7 @@ export default function MatchDay({ stats, journal }) {
     } else if (freeform || scoreTouched.current) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
-        location: fixture.notes || "", surface: "grass",
+        location: fixture.notes || "", surface: surfaceForVenue(fixture.notes || "") || "grass",
         wentWell: "", toImprove: "", rating: 5, freeform, statId: fixture.id,
         ...matchFacts,
       }, ...allJournal]);

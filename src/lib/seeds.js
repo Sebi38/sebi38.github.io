@@ -2,6 +2,7 @@ import { db, ROOT } from './firebase.js';
 import { SEED_BATCHES } from '../data/seasons.js';
 import { fbSnapToArray, arrayToFbObj } from './storage.js';
 import { readOnce } from './net.js';
+import { surfaceForVenue } from '../data/venues.js';
 
 const seedRef = key => db.ref(`${ROOT}/seeds/${key}`);
 const dataRef = node => db.ref(`${ROOT}/data/${node}`);
@@ -49,6 +50,24 @@ async function fixSpring26Positions(alreadyRun) {
   await seedRef('sp26-position-cb').set(true);
 }
 
+// Every journal entry was seeded with surface "grass", which was a default
+// rather than an observation — most of these grounds are turf. Applies the
+// confirmed venue surfaces from src/data/venues.js. Grounds not yet confirmed
+// are left untouched rather than guessed at.
+async function applyVenueSurfaces(alreadyRun) {
+  if (alreadyRun['venue-surface-1']) return;
+  const rows = fbSnapToArray(await readOnce(dataRef('journal')));
+  let changed = 0;
+  const next = rows.map(r => {
+    const surface = surfaceForVenue(r.location || '');
+    if (!surface || r.surface === surface) return r;
+    changed += 1;
+    return { ...r, surface };
+  });
+  if (changed > 0) await dataRef('journal').set(arrayToFbObj(next));
+  await seedRef('venue-surface-1').set(true);
+}
+
 // Seed anything the database has not seen. Every batch carries its own flag,
 // so this is safe on every load and safe to re-run after adding a season.
 //
@@ -63,4 +82,5 @@ export async function runSeedsIfNeeded() {
   }
   await linkSpring26Journal(alreadyRun);
   await fixSpring26Positions(alreadyRun);
+  await applyVenueSurfaces(alreadyRun);
 }
