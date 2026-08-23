@@ -5,6 +5,7 @@ import { onAuthReady } from './lib/firebase.js';
 import { loadFirebaseToLocal } from './lib/sync.js';
 import { todayISO } from './lib/season.js';
 import Nav from './ui/Nav.jsx';
+import ErrorBoundary from './ui/ErrorBoundary.jsx';
 import SignIn from './pages/SignIn.jsx';
 import Home from './pages/Home.jsx';
 import Matches from './pages/Matches.jsx';
@@ -136,8 +137,12 @@ export default function App() {
     <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
       <Nav active={page} setActive={setPage}/>
       {offline && <OfflineBar/>}
-      <Page stats={statsData} journal={journalData} setPage={setPage}
-            focusId={focusId} openMatch={openMatch}/>
+      {/* Keyed by tab so each one gets a fresh boundary: a page that throws
+          no longer takes the nav — and the rest of the site — down with it. */}
+      <ErrorBoundary key={page}>
+        <Page stats={statsData} journal={journalData} setPage={setPage}
+              focusId={focusId} openMatch={openMatch}/>
+      </ErrorBoundary>
     </div>
   );
 }

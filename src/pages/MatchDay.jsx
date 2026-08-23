@@ -354,7 +354,7 @@ export default function MatchDay({ stats, journal, focusId }) {
                 {moments.map((m, i) => (
                   <div key={m.id || i} style={{display: "flex", gap: 8, alignItems: "flex-start",
                                        background: C.bg, borderRadius: 8, padding: "8px 10px"}}>
-                    <span style={{color: C.ink2, fontSize: 13, lineHeight: 1.5, flex: 1}}>{m}</span>
+                    <span style={{color: C.ink2, fontSize: 13, lineHeight: 1.5, flex: 1}}>{momentLabel(m)}</span>
                     <button type="button" onClick={() => removeMoment(i)}
                             style={{background: "none", border: "none", color: C.faint,
                                     cursor: "pointer", fontSize: 14, padding: 0}}>✕</button>
