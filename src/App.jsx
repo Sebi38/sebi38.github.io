@@ -62,6 +62,13 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [page, setPage] = useState(() => readHash() || "home");
   const [autoRouted, setAutoRouted] = useState(false);
+  // Which match the tabs are focused on. Set from Matches so that opening
+  // Match Day or Sebi's Review lands on the game you were just looking at,
+  // instead of asking you to pick it again.
+  const [focusId, setFocusId] = useState(null);
+
+  // Jump to another tab with a match already selected.
+  const openMatch = (targetPage, id) => { setFocusId(id); setPage(targetPage); };
   const [statsData, setStatsData] = useState([]);
   const [journalData, setJournalData] = useState([]);
   const [dbReady, setDbReady] = useState(false);
@@ -129,7 +136,8 @@ export default function App() {
     <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
       <Nav active={page} setActive={setPage}/>
       {offline && <OfflineBar/>}
-      <Page stats={statsData} journal={journalData} setPage={setPage}/>
+      <Page stats={statsData} journal={journalData} setPage={setPage}
+            focusId={focusId} openMatch={openMatch}/>
     </div>
   );
 }

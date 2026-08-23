@@ -28,8 +28,10 @@ function defaultFixture(stats) {
 const resultFromScore = (f, a) =>
   f === "" || a === "" || f == null || a == null ? "—" : f > a ? "W" : f < a ? "L" : "D";
 
-export default function MatchDay({ stats, journal }) {
-  const [fixtureId, setFixtureId] = useState(() => defaultFixture(stats)?.id || "");
+export default function MatchDay({ stats, journal, focusId }) {
+  const [fixtureId, setFixtureId] = useState(() => focusId || defaultFixture(stats)?.id || "");
+  // Follow the match chosen on the Matches tab.
+  useEffect(() => { if (focusId && focusId !== fixtureId) setFixtureId(focusId); }, [focusId]);
   const fixture = useMemo(() => stats.find(g => g.id === fixtureId) || null, [stats, fixtureId]);
 
   const [goals, setGoals] = useState(0);

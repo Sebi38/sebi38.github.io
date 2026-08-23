@@ -5,6 +5,7 @@ import { surfaceForVenue } from '../data/venues.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
+import { questionsOf, openCount } from '../lib/questions.js';
 import { upcoming, played, nextFixture, record, form, monthLabel, countdownLabel,
          prettyDate, splitVenue, isPlayed, todayISO } from '../lib/season.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
@@ -33,7 +34,7 @@ const Reflection = ({ icon, title, color, children }) => (
   </div>
 );
 
-export default function Matches({ stats: statsProp, journal: journalProp }) {
+export default function Matches({ stats: statsProp, journal: journalProp, openMatch }) {
   const [stats, setStats] = useState(() => ld(SK.stats) || statsProp || []);
   const [journal, setJournal] = useState(() => ld(SK.journal) || journalProp || []);
   const [season, setSeason] = useState("all");
@@ -47,16 +48,25 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
   const saveStats = u => { setStats(u); sv(SK.stats, u); };
   const saveJournal = u => { setJournal(u); sv(SK.journal, u); };
 
-  const entryFor = id => journal.find(e => e.statId === id) || null;
+  // Journal entries are linked by statId. Older entries pre-date that link, so
+  // fall back to the date — but only when exactly one entry shares it, since
+  // some days have two fixtures.
+  const entryFor = (id, date) => {
+    const direct = journal.find(e => e.statId === id);
+    if (direct) return direct;
+    if (!date) return null;
+    const sameDay = journal.filter(e => !e.statId && e.date === date);
+    return sameDay.length === 1 ? sameDay[0] : null;
+  };
 
   // A match = the stat row (facts) plus its journal entry (reflection).
   const rows = useMemo(() => stats.map(s => {
-    const e = entryFor(s.id) || {};
+    const e = entryFor(s.id, s.date) || {};
     return { ...s, _entry: e,
       rating: e.rating, wentWell: e.wentWell, toImprove: e.toImprove,
       questionsForCoaches: e.questionsForCoaches,
       surface: e.surface || surfaceForVenue(s.notes || "") || "grass",
-      moments: momentsOf(e), takaLink: e.takaLink, veoLink: e.veoLink };
+      moments: momentsOf(e), questions: questionsOf(e), takaLink: e.takaLink, veoLink: e.veoLink };
   }), [stats, journal]);
 
   const scoped = useMemo(() => filterBySeason(rows, season), [rows, season]);
@@ -90,6 +100,13 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
     }
     return out;
   }, [list]);
+
+  // Every question across the scoped season, newest match first.
+  const allQuestions = useMemo(() => scoped
+    .filter(r => r.questions.length)
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .map(r => ({ match: r, questions: r.questions })), [scoped]);
+  const openQ = allQuestions.reduce((n,g) => n + openCount(g.questions), 0);
 
   const next = nextFixture(scoped);
   const rec = record(scoped);
@@ -143,6 +160,12 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
     const e = row._entry;
     const next = momentsOf(e).map(m => m.id === mId ? { ...m, reviewed: !m.reviewed } : m);
     if (e?.id) saveJournal(journal.map(x => x.id === e.id ? { ...x, moments: next, freeform: "" } : x));
+  };
+
+  const toggleQuestion = (row, qId) => {
+    const e = row._entry;
+    const next = questionsOf(e).map(q => q.id === qId ? { ...q, answered: !q.answered } : q);
+    if (e?.id) saveJournal(journal.map(x => x.id === e.id ? { ...x, questionsForCoaches: next } : x));
   };
 
   const num = (l,k,extra={}) => (
@@ -213,7 +236,7 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
           ))}
         </div>
         <div style={{display:"flex",background:C.surface,borderRadius:12,border:`1px solid ${C.line}`,overflow:"hidden"}}>
-          {[{v:"cards",l:"Cards"},{v:"table",l:"Table"}].map(t=>(
+          {[{v:"cards",l:"Cards"},{v:"table",l:"Table"},{v:"questions",l:`Questions${openQ?` (${openQ})`:""}`}].map(t=>(
             <button key={t.v} onClick={()=>setMode(t.v)} style={{padding:"9px 15px",background:mode===t.v?"#1a2f5a":"none",
               border:"none",color:mode===t.v?C.ink:C.muted,fontSize:12.5,fontWeight:mode===t.v?700:500,cursor:"pointer",fontFamily:BODY}}>{t.l}</button>
           ))}
@@ -222,7 +245,37 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
         <button onClick={()=>{setForm(EMPTY);setEditing("new");}} style={{...BP,marginLeft:"auto"}}>+ Add Match</button>
       </div>
 
-      {list.length === 0 ? <Empty icon="⚽" text="No matches here yet."/>
+      {mode === "questions" ? (
+        allQuestions.length === 0
+          ? <Empty icon="❓" text="No questions yet — Sebi adds them in his review after a match."/>
+          : <div style={{display:"grid",gap:14}}>
+              <div style={{color:C.muted,fontSize:12.5}}>
+                {openQ} open · {allQuestions.reduce((n,g)=>n+g.questions.length,0) - openQ} answered
+              </div>
+              {allQuestions.map(({match:r, questions}, gi) => (
+                <div key={r.id} style={{...CardS,padding:"16px 18px",...rise(gi)}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+                    <span style={{color:C.ink,fontWeight:700,fontSize:15}}>{r.opponent}</span>
+                    <span style={{color:C.muted,fontSize:12}}>{prettyDate(r.date)}</span>
+                    <button onClick={()=>openMatch?.("reflect", r.id)}
+                            style={{marginLeft:"auto",background:"none",border:"none",color:C.blue,
+                                    fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:BODY}}>Edit in Sebi's Review →</button>
+                  </div>
+                  <div style={{display:"grid",gap:6}}>
+                    {questions.map(q => (
+                      <label key={q.id} style={{display:"flex",gap:10,alignItems:"flex-start",background:C.bg,
+                        borderRadius:8,padding:"10px 12px",cursor:"pointer"}}>
+                        <input type="checkbox" checked={q.answered} onChange={()=>toggleQuestion(r,q.id)}
+                               style={{marginTop:2,width:17,height:17,accentColor:RESULT.W.fg,flexShrink:0,cursor:"pointer"}}/>
+                        <span style={{color:q.answered?C.muted:C.ink2,fontSize:14,lineHeight:1.5,
+                                      textDecoration:q.answered?"line-through":"none"}}>{q.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+      ) : list.length === 0 ? <Empty icon="⚽" text="No matches here yet."/>
         : mode === "table" ? <StatsTable rows={list} onEdit={openEdit} onDelete={remove}/>
         : groups.map(g => (
           <div key={g.label} style={{marginBottom:26}}>
@@ -299,7 +352,27 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
 
                         {r.wentWell && <Reflection icon="✅" title="WHAT WENT WELL" color={RESULT.W.fg}>{r.wentWell}</Reflection>}
                         {r.toImprove && <Reflection icon="🔧" title="TO IMPROVE" color={RESULT.D.fg}>{r.toImprove}</Reflection>}
-                        {r.questionsForCoaches && <Reflection icon="❓" title="QUESTIONS FOR COACHES" color={C.violet}>{r.questionsForCoaches}</Reflection>}
+                        {r.questions.length > 0 && (
+                          <div style={{marginBottom:12}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                              <span style={{color:C.violet,fontSize:12,fontWeight:700,letterSpacing:1}}>❓ QUESTIONS FOR COACHES</span>
+                              <span style={{color:C.faint,fontSize:11}}>
+                                {r.questions.length - openCount(r.questions)}/{r.questions.length} answered
+                              </span>
+                            </div>
+                            <div style={{display:"grid",gap:5}}>
+                              {r.questions.map(q=>(
+                                <label key={q.id} style={{display:"flex",gap:10,alignItems:"flex-start",background:C.bg,
+                                  borderRadius:8,padding:"9px 11px",cursor:"pointer"}}>
+                                  <input type="checkbox" checked={q.answered} onChange={()=>toggleQuestion(r,q.id)}
+                                         style={{marginTop:2,width:17,height:17,accentColor:RESULT.W.fg,flexShrink:0,cursor:"pointer"}}/>
+                                  <span style={{color:q.answered?C.muted:C.ink2,fontSize:13.5,lineHeight:1.5,
+                                                textDecoration:q.answered?"line-through":"none"}}>{q.text}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {r.moments.length > 0 && (
                           <div style={{marginBottom:12}}>
@@ -331,6 +404,12 @@ export default function Matches({ stats: statsProp, journal: journalProp }) {
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.blue,borderColor:C.blue+"44",textDecoration:"none"}}>🎥 Taka</a>}
                           {r.veoLink && <a href={r.veoLink} target="_blank" rel="noopener noreferrer"
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44",textDecoration:"none"}}>🎥 Veo</a>}
+                          <button onClick={ev=>{ev.stopPropagation();openMatch?.("matchday", r.id);}}
+                            style={{...BS,padding:"6px 14px",fontSize:12,color:C.gold,borderColor:C.gold+"44"}}>⏱ Log match day</button>
+                          {isPlayed(r) && (
+                            <button onClick={ev=>{ev.stopPropagation();openMatch?.("reflect", r.id);}}
+                              style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44"}}>🧠 Sebi's review</button>
+                          )}
                           <button onClick={ev=>{ev.stopPropagation();openEdit(r);}}
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.blue,borderColor:C.blue+"44"}}>✏️ Edit match</button>
                           <button onClick={ev=>{ev.stopPropagation();remove(r.id);}}

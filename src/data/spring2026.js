@@ -13,13 +13,13 @@ export const SPRING26_STATS = [
 ];
 
 export const SPRING26_JOURNAL = [
-  {id:"spj26-1",date:"2026-02-22",opponent:"Sporting Athletic Club",location:"Chase Fields · Wilmington, DE",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-2",date:"2026-02-28",opponent:"Bethesda SC",location:"Maryland Soccerplex",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-3",date:"2026-03-08",opponent:"SYC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-4",date:"2026-03-15",opponent:"Sporting Athletic Club",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-5",date:"2026-04-11",opponent:"Baltimore Armour",location:"Covenant Park · Ellicott City, MD",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-6",date:"2026-04-12",opponent:"Bethesda SC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-7",date:"2026-04-18",opponent:"Keystone FC",location:"Bermudian Springs Middle School",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-8",date:"2026-05-02",opponent:"West Virginia Soccer",location:"Limerick Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
-  {id:"spj26-9",date:"2026-05-03",opponent:"Beadling SC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:""},
+  {id:"spj26-1",date:"2026-02-22",opponent:"Sporting Athletic Club",location:"Chase Fields · Wilmington, DE",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-1"},
+  {id:"spj26-2",date:"2026-02-28",opponent:"Bethesda SC",location:"Maryland Soccerplex",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-2"},
+  {id:"spj26-3",date:"2026-03-08",opponent:"SYC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-3"},
+  {id:"spj26-4",date:"2026-03-15",opponent:"Sporting Athletic Club",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-4"},
+  {id:"spj26-5",date:"2026-04-11",opponent:"Baltimore Armour",location:"Covenant Park · Ellicott City, MD",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-5"},
+  {id:"spj26-6",date:"2026-04-12",opponent:"Bethesda SC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-6"},
+  {id:"spj26-7",date:"2026-04-18",opponent:"Keystone FC",location:"Bermudian Springs Middle School",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-7"},
+  {id:"spj26-8",date:"2026-05-02",opponent:"West Virginia Soccer",location:"Limerick Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-8"},
+  {id:"spj26-9",date:"2026-05-03",opponent:"Beadling SC",location:"Witter Field",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",filmLink:"",statId:"sp26-9"},
 ];

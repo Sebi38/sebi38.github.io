@@ -5,6 +5,7 @@ import { C, CardS, GlassS, DISPLAY, PAGE, IS, BP, RESULT, rC, rise } from '../ui
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Empty from '../ui/Empty.jsx';
 import { played, prettyDate, isPlayed } from '../lib/season.js';
+import { questionsOf, questionsToText, mergeQuestionText } from '../lib/questions.js';
 
 // Seb's page. Three questions and nothing else — the reflection is the
 // development work, so it should not be buried in a fifteen-field form.
@@ -14,10 +15,12 @@ const PROMPTS = [
   "Questions for my coaches",
 ];
 
-export default function Reflect({ stats, journal }) {
+export default function Reflect({ stats, journal, focusId }) {
   // Games already played, newest first — reflecting is a post-match act.
   const games = useMemo(() => played(stats), [stats]);
-  const [gameId, setGameId] = useState(() => games[0]?.id || "");
+  const [gameId, setGameId] = useState(() => focusId || games[0]?.id || "");
+  // Follow the match chosen on the Matches tab.
+  useEffect(() => { if (focusId && focusId !== gameId) setGameId(focusId); }, [focusId]);
   const game = useMemo(() => games.find(g => g.id === gameId) || null, [games, gameId]);
 
   const entry = useMemo(
@@ -35,7 +38,7 @@ export default function Reflect({ stats, journal }) {
     setRating(entry?.rating ?? 5);
     setWentWell(entry?.wentWell || "");
     setToImprove(entry?.toImprove || "");
-    setQuestions(entry?.questionsForCoaches || "");
+    setQuestions(questionsToText(questionsOf(entry)));
     setSaved(false);
   }, [gameId, entry?.id]);
 
@@ -44,12 +47,12 @@ export default function Reflect({ stats, journal }) {
     const all = ld(SK.journal) || [];
     if (entry) {
       sv(SK.journal, all.map(e => e.id === entry.id
-        ? { ...e, rating, wentWell, toImprove, questionsForCoaches: questions, statId: game.id } : e));
+        ? { ...e, rating, wentWell, toImprove, questionsForCoaches: mergeQuestionText(questions, questionsOf(entry)), statId: game.id } : e));
     } else {
       sv(SK.journal, [{
         id: gid(), date: game.date, opponent: game.opponent, location: game.notes || "",
         surface: "grass", position: game.position || "CB",
-        wentWell, toImprove, questionsForCoaches: questions, rating, moments: [], statId: game.id,
+        wentWell, toImprove, questionsForCoaches: mergeQuestionText(questions), rating, moments: [], statId: game.id,
       }, ...all]);
     }
     setSaved(true);
@@ -117,7 +120,7 @@ export default function Reflect({ stats, journal }) {
 
           {field(PROMPTS[0], wentWell, setWentWell, "One or two things. Be specific — “won my headers” beats “played well”.")}
           {field(PROMPTS[1], toImprove, setToImprove, "One thing to take into training this week.")}
-          {field(PROMPTS[2], questions, setQuestions, "Anything you want to ask Coach — positioning, a decision you were unsure about, what to work on.")}
+          {field(PROMPTS[2], questions, setQuestions, "One question per line. Each becomes its own item you can tick off once it's answered.")}
 
           <button type="button" onClick={save}
                   style={{...BP, width: "100%", padding: "16px", fontSize: 15,
