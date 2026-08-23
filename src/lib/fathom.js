@@ -172,9 +172,14 @@ export function parseFathomRecap(raw) {
 // number misattributed to the wrong game is worse than no number at all.
 export function findStats(parsed) {
   const hay = [parsed.purpose, ...parsed.takeaways, ...parsed.topics].join(" ");
-  const out = [];
-  const re = /(\d+)\s+(short passes|long passes|passes|crucial interceptions|interceptions|crucial tackles|tackles|shots|goals|assists)/gi;
+  // Longer phrases first so "short passes" wins over "passes".
+  const re = /(\d+)\s+(crucial interceptions|crucial tackles|short passes|long passes|ground duels|interceptions|clearances|tackles|passes|assists|shots|goals)/gi;
+  const seen = new Map();
   let m;
-  while ((m = re.exec(hay))) out.push({ value: Number(m[1]), label: m[2].toLowerCase() });
-  return out;
+  while ((m = re.exec(hay))) {
+    // The same figure is often repeated in a takeaway and again in a topic.
+    const key = `${m[1]}|${m[2].toLowerCase()}`;
+    if (!seen.has(key)) seen.set(key, { value: Number(m[1]), label: m[2].toLowerCase() });
+  }
+  return [...seen.values()];
 }
