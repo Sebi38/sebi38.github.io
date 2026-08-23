@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { SK } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
-import { C, CardS, GlassS, DISPLAY, PAGE, IS, BP, RESULT, rC, rise } from '../ui/theme.js';
+import { C, CardS, GlassS, DISPLAY, PAGE, IS, BP, RESULT, rC, rise, BS } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Empty from '../ui/Empty.jsx';
 import { played, prettyDate, isPlayed } from '../lib/season.js';
@@ -32,17 +32,27 @@ export default function Reflect({ stats, journal, focusId }) {
   const [wentWell, setWentWell] = useState("");
   const [toImprove, setToImprove] = useState("");
   const [questions, setQuestions] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState("");
+  const [savedAt, setSavedAt] = useState(null);
+  // Same rule as Match Day: nothing is written until something is changed, so
+  // opening a match to read it never records anything.
+  const touched = useRef(false);
+  const loading = useRef(false);
 
   useEffect(() => {
+    loading.current = true;
+    touched.current = false;
     setRating(entry?.rating ?? 5);
     setWentWell(entry?.wentWell || "");
     setToImprove(entry?.toImprove || "");
     setQuestions(questionsToText(questionsOf(entry)));
-    setSaved(false);
+    setStatus("");
+    setSavedAt(null);
+    const t = setTimeout(() => { loading.current = false; }, 0);
+    return () => clearTimeout(t);
   }, [gameId, entry?.id]);
 
-  const save = () => {
+  const save = useCallback(() => {
     if (!game) return;
     const all = ld(SK.journal) || [];
     if (entry) {
@@ -55,9 +65,17 @@ export default function Reflect({ stats, journal, focusId }) {
         wentWell, toImprove, questionsForCoaches: mergeQuestionText(questions), rating, moments: [], statId: game.id,
       }, ...all]);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2600);
-  };
+    setStatus("saved");
+    setSavedAt(new Date());
+  }, [game, entry, rating, wentWell, toImprove, questions, journal]);
+
+  // Autosave — a reflection half-typed and abandoned should still be there.
+  useEffect(() => {
+    if (!game || loading.current || !touched.current) return;
+    setStatus("saving");
+    const t = setTimeout(() => save(), 700);
+    return () => clearTimeout(t);
+  }, [rating, wentWell, toImprove, questions, game, save]);
 
   if (!games.length) {
     return <div style={PAGE}><Empty icon="✍️" text="No played games yet — reflections unlock after a match."/></div>;
@@ -72,7 +90,7 @@ export default function Reflect({ stats, journal, focusId }) {
       <label style={{color: C.ink, fontSize: 15, fontWeight: 700, display: "block", marginBottom: 10}}>
         {label}
       </label>
-      <textarea value={value} onChange={e => onChange(e.target.value)} rows={4} placeholder={placeholder}
+      <textarea value={value} onChange={e => { touched.current = true; onChange(e.target.value); }} rows={4} placeholder={placeholder}
                 style={{...IS, resize: "vertical", fontSize: 15, lineHeight: 1.6}}/>
     </div>
   );
@@ -111,7 +129,7 @@ export default function Reflect({ stats, journal, focusId }) {
               </div>
             </div>
             <input type="range" min="1" max="10" value={rating}
-                   onChange={e => setRating(parseInt(e.target.value))}
+                   onChange={e => { touched.current = true; setRating(parseInt(e.target.value)); }}
                    style={{width: "100%", accentColor: rC(rating), marginTop: 10, height: 30}}/>
             <div style={{display: "flex", justifyContent: "space-between", color: C.faint, fontSize: 11}}>
               <span>Off day</span><span>Best game</span>
@@ -122,11 +140,19 @@ export default function Reflect({ stats, journal, focusId }) {
           {field(PROMPTS[1], toImprove, setToImprove, "One thing to take into training this week.")}
           {field(PROMPTS[2], questions, setQuestions, "One question per line. Each becomes its own item you can tick off once it's answered.")}
 
-          <button type="button" onClick={save}
-                  style={{...BP, width: "100%", padding: "16px", fontSize: 15,
-                          background: saved ? RESULT.W.fg : BP.background}}>
-            {saved ? "✓ SAVED" : "SAVE MY REFLECTION"}
-          </button>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginTop:4}}>
+            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{width:8,height:8,borderRadius:"50%",flexShrink:0,
+                            background: status==="saving" ? C.gold : status==="saved" ? RESULT.W.fg : C.faint,
+                            animation: status==="saving" ? "pulseDot 1s ease-in-out infinite" : "none"}}/>
+              <span style={{color: status==="saved" ? RESULT.W.fg : C.muted, fontSize:12.5, fontWeight:600}}>
+                {status==="saving" ? "Saving…"
+                  : status==="saved" ? `Saved${savedAt ? " " + savedAt.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) : ""}`
+                  : "Changes save automatically"}
+              </span>
+            </div>
+            <button type="button" onClick={() => save()} style={{...BS,padding:"10px 18px",fontSize:13}}>Save now</button>
+          </div>
         </>
       )}
     </div>

@@ -4,6 +4,10 @@ import { fbSnapToArray, arrayToFbObj } from './storage.js';
 import { readOnce } from './net.js';
 import { surfaceForVenue } from '../data/venues.js';
 import { toMoments } from './moments.js';
+import { FALL25_STATS } from '../data/fall2025.js';
+import { SPRING26_STATS, SPRING26_JOURNAL } from '../data/spring2026.js';
+import { FALL26_STATS, FALL26_JOURNAL } from '../data/fall2026.js';
+import { SPRING27_STATS, SPRING27_JOURNAL } from '../data/spring2027.js';
 
 const seedRef = key => db.ref(`${ROOT}/seeds/${key}`);
 const dataRef = node => db.ref(`${ROOT}/data/${node}`);
@@ -88,6 +92,34 @@ async function migrateMoments(alreadyRun) {
   await seedRef('moments-structured-1').set(true);
 }
 
+// Venue used to be one string that mixed the ground, its address and the
+// kick-off time. The TeamSnap feed actually carries the field name and the
+// address separately — the name sits in the event description, which the first
+// import discarded. This backfills both from the season data, matched by row id.
+async function splitVenueFields(alreadyRun) {
+  if (alreadyRun['venue-split-1']) return;
+  const source = new Map();
+  for (const row of [...FALL25_STATS, ...SPRING26_STATS, ...SPRING26_JOURNAL,
+                     ...FALL26_STATS, ...FALL26_JOURNAL,
+                     ...SPRING27_STATS, ...SPRING27_JOURNAL]) {
+    if (row.fieldName != null) source.set(row.id, row);
+  }
+  for (const node of ['stats', 'journal']) {
+    const rows = fbSnapToArray(await readOnce(dataRef(node)));
+    let changed = 0;
+    const next = rows.map(r => {
+      if (r.fieldName != null) return r;          // already split
+      const src = source.get(r.id);
+      if (!src) return r;                          // hand-added row: left alone
+      changed += 1;
+      return { ...r, fieldName: src.fieldName || "", address: src.address || "",
+               kickoff: src.kickoff || "", tag: src.tag || "" };
+    });
+    if (changed > 0) await dataRef(node).set(arrayToFbObj(next));
+  }
+  await seedRef('venue-split-1').set(true);
+}
+
 // Seed anything the database has not seen. Every batch carries its own flag,
 // so this is safe on every load and safe to re-run after adding a season.
 //
@@ -104,4 +136,5 @@ export async function runSeedsIfNeeded() {
   await fixSpring26Positions(alreadyRun);
   await applyVenueSurfaces(alreadyRun);
   await migrateMoments(alreadyRun);
+  await splitVenueFields(alreadyRun);
 }

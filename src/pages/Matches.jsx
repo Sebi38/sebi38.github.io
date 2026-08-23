@@ -6,8 +6,9 @@ import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { questionsOf, openCount } from '../lib/questions.js';
+import { EVENT_TYPES, eventsOf, countsOf } from '../lib/events.js';
 import { upcoming, played, nextFixture, record, form, monthLabel, countdownLabel,
-         prettyDate, splitVenue, isPlayed, todayISO } from '../lib/season.js';
+         prettyDate, venueOf, isPlayed, todayISO } from '../lib/season.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Empty from '../ui/Empty.jsx';
@@ -17,7 +18,7 @@ import SearchBar from '../ui/SearchBar.jsx';
 import FormGuide from '../ui/FormGuide.jsx';
 import StatsTable from '../ui/StatsTable.jsx';
 
-const EMPTY = {date:"",opponent:"",location:"",surface:"grass",positions:["","",""],started:null,
+const EMPTY = {date:"",opponent:"",fieldName:"",address:"",kickoff:"",surface:"grass",positions:["","",""],started:null,
   result:"—",scoreFor:"",scoreAgainst:"",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,
   tackles:0,takaPos:"",takaNeg:"",takaLink:"",veoLink:""};
 
@@ -66,7 +67,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
       rating: e.rating, wentWell: e.wentWell, toImprove: e.toImprove,
       questionsForCoaches: e.questionsForCoaches,
       surface: e.surface || surfaceForVenue(s.notes || "") || "grass",
-      moments: momentsOf(e), questions: questionsOf(e), takaLink: e.takaLink, veoLink: e.veoLink };
+      moments: momentsOf(e), questions: questionsOf(e), events: eventsOf(s), takaLink: e.takaLink, veoLink: e.veoLink };
   }), [stats, journal]);
 
   const scoped = useMemo(() => filterBySeason(rows, season), [rows, season]);
@@ -115,7 +116,8 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
   // ── editing match facts ──────────────────────────────────────────────────
   const openEdit = r => {
     const src = r.positions?.length ? r.positions : (r.position ? [r.position] : []);
-    setForm({ date:r.date, opponent:r.opponent, location:r.notes||"", surface:r.surface||"grass",
+    const v = venueOf(r);
+    setForm({ date:r.date, opponent:r.opponent, fieldName:v.fieldName, address:v.address, kickoff:v.kickoff, surface:r.surface||"grass",
       positions:[src[0]||"",src[1]||"",src[2]||""], started:typeof r.started==="boolean"?r.started:null,
       result:r.result||"—", scoreFor:hasValue(r.scoreFor)?r.scoreFor:"", scoreAgainst:hasValue(r.scoreAgainst)?r.scoreAgainst:"",
       minutes:r.minutes||0, goals:r.goals||0, assists:r.assists||0, shots:r.shots||0, sot:r.sot||0,
@@ -127,7 +129,8 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
   const saveEdit = () => {
     const p = normalizeStatForm(formState);
     const positions = formState.positions.filter(Boolean);
-    const factPatch = { date:p.date, opponent:p.opponent, notes:p.location, result:p.result,
+    const factPatch = { date:p.date, opponent:p.opponent, fieldName:formState.fieldName,
+      address:formState.address, kickoff:formState.kickoff, result:p.result,
       scoreFor:p.scoreFor, scoreAgainst:p.scoreAgainst, minutes:p.minutes, goals:p.goals,
       assists:p.assists, shots:p.shots, sot:p.sot, passes:p.passes, tackles:p.tackles,
       takaPos:p.takaPos, takaNeg:p.takaNeg, positions, position:positions[0]||"", started:formState.started };
@@ -141,7 +144,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
     }
 
     const e = journal.find(x => x.statId === statId);
-    const jPatch = { location:p.location, surface:formState.surface,
+    const jPatch = { fieldName:formState.fieldName, address:formState.address, surface:formState.surface,
                      takaLink:formState.takaLink, veoLink:formState.veoLink };
     if (e) saveJournal(journal.map(x => x.id === e.id ? { ...x, ...jPatch } : x));
     else saveJournal([{ id:gid(), statId, date:p.date, opponent:p.opponent, ...jPatch,
@@ -185,7 +188,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
 
       {next && mode === "cards" && (() => {
         const cd = countdownLabel(next.date);
-        const { venue, time } = splitVenue(next.notes || "");
+        const v = venueOf(next);
         const today = cd === "Today";
         return (
           <div style={{...GlassS,padding:"20px 22px",marginBottom:22,
@@ -196,8 +199,9 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                 {today ? "Match day" : "Next up"}
               </div>
               <div style={{fontFamily:DISPLAY,fontSize:34,color:C.ink,lineHeight:1.1,marginTop:4}}>{next.opponent}</div>
-              <div style={{color:C.ink3,fontSize:13,marginTop:4}}>{prettyDate(next.date)}{time&&` · ${time}`}</div>
-              {venue && <div style={{color:C.muted,fontSize:12.5}}>{venue}</div>}
+              <div style={{color:C.ink3,fontSize:13,marginTop:4}}>{prettyDate(next.date)}{v.kickoff&&` · ${v.kickoff}`}</div>
+              {v.fieldName && <div style={{color:C.ink2,fontSize:13,marginTop:2}}>{v.fieldName}</div>}
+              {v.address && <div style={{color:C.muted,fontSize:12}}>{v.address}</div>}
             </div>
             <div style={{fontFamily:DISPLAY,fontSize:42,color:today?C.red:C.ink,lineHeight:1}}>{cd||"TBC"}</div>
           </div>
@@ -287,7 +291,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
             <div style={{display:"grid",gap:10}}>
               {g.games.map((r,i) => {
                 const res = RESULT[r.result] || RESULT["—"];
-                const { venue, time, tag } = splitVenue(r.notes || "");
+                const v = venueOf(r);
                 const score = hasValue(r.scoreFor)&&hasValue(r.scoreAgainst) ? `${r.scoreFor}–${r.scoreAgainst}` : null;
                 const open = expanded === r.id;
                 const cd = isPlayed(r) ? null : countdownLabel(r.date);
@@ -306,9 +310,9 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                           <span style={{color:C.ink,fontWeight:700,fontSize:15.5}}>{r.opponent}</span>
-                          {tag && <span style={{fontSize:10,fontWeight:700,letterSpacing:1,color:C.gold,
+                          {v.tag && <span style={{fontSize:10,fontWeight:700,letterSpacing:1,color:C.gold,
                             background:"rgba(244,162,97,.13)",border:`1px solid ${C.gold}33`,padding:"2px 7px",
-                            borderRadius:5,textTransform:"uppercase"}}>{tag}</span>}
+                            borderRadius:5,textTransform:"uppercase"}}>{v.tag}</span>}
                           {r.rating!=null && isPlayed(r) && (
                             <span style={{fontSize:11,fontWeight:800,color:rC(r.rating),
                               background:`${rC(r.rating)}1f`,border:`1px solid ${rC(r.rating)}44`,
@@ -316,10 +320,11 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                           )}
                         </div>
                         <div style={{color:C.muted,fontSize:12.5,marginTop:3}}>
-                          {prettyDate(r.date)}{time&&` · ${time}`}{venue&&` · ${venue}`}
+                          {prettyDate(r.date)}{v.kickoff&&` · ${v.kickoff}`}{v.fieldName&&` · ${v.fieldName}`}
                           {" · "}{r.surface==="turf"?"🏟 Turf":"🌱 Grass"}
                           {(r.positions?.length||r.position)&&<span style={{color:C.blue}}> · {r.positions?.length?r.positions.join(" → "):r.position}</span>}
                         </div>
+                        {v.address && <div style={{color:C.faint,fontSize:11.5,marginTop:2}}>{v.address}</div>}
                       </div>
                       <div style={{textAlign:"right",flexShrink:0}}>
                         {isPlayed(r)
@@ -340,6 +345,8 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                               {v:r.assists,l:"AST",c:RESULT.W.fg},{v:r.shots||0,l:"SHOTS",c:C.violet},
                               {v:r.sot||0,l:"SOT",c:C.blue},{v:r.passes||0,l:"PASS",c:C.muted},
                               {v:r.tackles||0,l:"TKL",c:C.muted},
+                              ...EVENT_TYPES.filter(t=>countsOf(r.events)[t.key]>0)
+                                  .map(t=>({v:countsOf(r.events)[t.key],l:t.short,c:C.teal})),
                               ...(hasValue(r.takaPos)?[{v:r.takaPos,l:"T+",c:RESULT.W.fg}]:[]),
                               ...(hasValue(r.takaNeg)?[{v:r.takaNeg,l:"T−",c:RESULT.L.fg}]:[])].map((s,j)=>(
                               <div key={j} style={{textAlign:"center"}}>
@@ -438,9 +445,13 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
               <div><label style={LS}>Opponent</label><input value={formState.opponent} onChange={e=>setForm({...formState,opponent:e.target.value})} style={IS}/></div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
-              <div><label style={LS}>Location</label><input value={formState.location} onChange={e=>setForm({...formState,location:e.target.value})} placeholder="e.g. Witter Field" style={IS}/></div>
+              <div><label style={LS}>Field name</label><input value={formState.fieldName} onChange={e=>setForm({...formState,fieldName:e.target.value})} placeholder="e.g. Williamsburg Middle School" style={IS}/></div>
               <div><label style={LS}>Surface</label><select value={formState.surface} onChange={e=>setForm({...formState,surface:e.target.value})} style={IS}>
                 <option value="grass">🌱 Grass</option><option value="turf">🏟 Turf</option></select></div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
+              <div><label style={LS}>Address</label><input value={formState.address} onChange={e=>setForm({...formState,address:e.target.value})} placeholder="e.g. 5241 36th St N, Arlington, VA 22207" style={IS}/></div>
+              <div><label style={LS}>Kick-off</label><input value={formState.kickoff} onChange={e=>setForm({...formState,kickoff:e.target.value})} placeholder="e.g. 2:15 PM" style={IS}/></div>
             </div>
             <div>
               <label style={LS}>Positions played <span style={{color:C.faint,fontWeight:400}}>— 2nd and 3rd only if he moved</span></label>

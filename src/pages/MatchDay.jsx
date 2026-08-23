@@ -7,9 +7,10 @@ import SectionTitle from '../ui/SectionTitle.jsx';
 import Stepper from '../ui/Stepper.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import Empty from '../ui/Empty.jsx';
-import { upcoming, played, prettyDate, splitVenue, isPlayed, todayISO as todayStr } from '../lib/season.js';
+import { upcoming, played, prettyDate, venueOf, isPlayed, todayISO as todayStr } from '../lib/season.js';
 import { surfaceForVenue } from '../data/venues.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
+import { EVENT_TYPES, eventsOf, countOf } from '../lib/events.js';
 
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -43,7 +44,9 @@ export default function MatchDay({ stats, journal, focusId }) {
   const [positions, setPositions] = useState(["", "", ""]);
   // null = not recorded yet, so a blank fixture isn't claimed as "did not start".
   const [started, setStarted] = useState(null);
-  const [venueText, setVenueText] = useState("");
+  const [fieldName, setFieldName] = useState("");
+  const [address, setAddress] = useState("");
+  const [events, setEvents] = useState([]);
   const [surface, setSurface] = useState("grass");
   const [moment, setMoment] = useState("");
   const [moments, setMoments] = useState([]);
@@ -78,9 +81,12 @@ export default function MatchDay({ stats, journal, focusId }) {
       : (fixture.position ? [fixture.position] : []);
     setPositions([existing[0] || "", existing[1] || "", existing[2] || ""]);
     setStarted(typeof fixture.started === "boolean" ? fixture.started : null);
-    setVenueText(fixture.notes || "");
+    const v = venueOf(fixture);
+    setFieldName(v.fieldName);
+    setAddress(v.address);
+    setEvents(eventsOf(fixture));
     const j0 = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
-    setSurface(j0?.surface || surfaceForVenue(fixture.notes || "") || "grass");
+    setSurface(j0?.surface || surfaceForVenue(`${v.fieldName} ${v.address}`) || "grass");
     const j = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
     setMoments(momentsOf(j));
     setStatus("");
@@ -120,13 +126,14 @@ export default function MatchDay({ stats, journal, focusId }) {
   const persist = useCallback((overrides = {}) => {
     if (!fixture) return;
     const m = overrides.moments ?? moments;
+    const ev = overrides.events ?? events;
     const allStats = ld(SK.stats) || [];
     const playedPositions = positions.filter(Boolean);
     sv(SK.stats, allStats.map(st => st.id === fixture.id
       ? { ...st, goals, assists, minutes,
           positions: playedPositions,
           position: playedPositions[0] || st.position || "",
-          started, notes: venueText,
+          started, fieldName, address, events: ev,
           // Leave the score and result alone until someone has touched them,
           // so an untouched fixture is never recorded as a 0–0 draw.
           ...(scoreTouched.current
@@ -141,7 +148,7 @@ export default function MatchDay({ stats, journal, focusId }) {
       goals, assists, minutes, started,
       positions: playedPositions,
       position: playedPositions[0] || fixture.position || "CB",
-      location: venueText, surface,
+      fieldName, address, surface,
       ...(scoreTouched.current
         ? { scoreFor: sf, scoreAgainst: sa, result: resultFromScore(sf, sa) }
         : {}),
@@ -153,7 +160,7 @@ export default function MatchDay({ stats, journal, focusId }) {
     } else if (momentList.length || scoreTouched.current) {
       sv(SK.journal, [{
         id: gid(), date: fixture.date, opponent: fixture.opponent,
-        location: venueText, surface,
+        fieldName, address, surface,
         wentWell: "", toImprove: "", questionsForCoaches: "", rating: 5,
         moments: momentList, statId: fixture.id,
         ...matchFacts,
@@ -161,7 +168,7 @@ export default function MatchDay({ stats, journal, focusId }) {
     }
     setStatus("saved");
     setSavedAt(new Date());
-  }, [fixture, goals, assists, sf, sa, minutes, positions, started, moments]);
+  }, [fixture, goals, assists, sf, sa, minutes, positions, started, moments, events, fieldName, address, surface]);
 
   // Autosave. Every change is written, so nothing depends on remembering to
   // press a button during a match.
@@ -170,13 +177,13 @@ export default function MatchDay({ stats, journal, focusId }) {
     setStatus("saving");
     const t = setTimeout(() => persist(), 600);
     return () => clearTimeout(t);
-  }, [goals, assists, sf, sa, minutes, positions, started, moments, fixture, persist]);
+  }, [goals, assists, sf, sa, minutes, positions, started, moments, events, fieldName, address, surface, fixture, persist]);
 
   if (!stats.length) {
     return <div style={PAGE}><Empty icon="⚽" text="No fixtures yet."/></div>;
   }
 
-  const { venue, time } = fixture ? splitVenue(venueText || fixture.notes || "") : {};
+  const v = fixture ? venueOf({ ...fixture, fieldName, address }) : {};
   const isToday = fixture?.date === todayStr();
 
   // Fixtures worth offering: anything near today, newest first.
@@ -207,9 +214,9 @@ export default function MatchDay({ stats, journal, focusId }) {
             <div style={{fontFamily: DISPLAY, fontSize: 30, color: C.ink, lineHeight: 1.1, marginTop: 4}}>
               {fixture.opponent}
             </div>
-            {(venue || time) && (
+            {(v.fieldName || v.address || v.kickoff) && (
               <div style={{color: C.muted, fontSize: 12.5, marginTop: 3}}>
-                {[time, venue].filter(Boolean).join(" · ")}
+                {[v.fieldName || v.address, v.kickoff].filter(Boolean).join(" · ")}
               </div>
             )}
           </div>
@@ -217,10 +224,15 @@ export default function MatchDay({ stats, journal, focusId }) {
           {/* where — editable at the field, because the venue on the
               calendar is often wrong and the surface is only known on arrival */}
           <div style={{...CardS, padding: "16px", marginBottom: 14, ...rise(0)}}>
-            <label style={LS}>Location</label>
-            <input value={venueText}
-                   onChange={e => { touched.current = true; setVenueText(e.target.value); }}
-                   placeholder="e.g. Witter Field · 2:15 PM"
+            <label style={LS}>Field name</label>
+            <input value={fieldName}
+                   onChange={e => { touched.current = true; setFieldName(e.target.value); }}
+                   placeholder="e.g. Williamsburg Middle School"
+                   style={{...IS, marginBottom: 10}}/>
+            <label style={LS}>Address</label>
+            <input value={address}
+                   onChange={e => { touched.current = true; setAddress(e.target.value); }}
+                   placeholder="e.g. 5241 36th St N, Arlington, VA 22207"
                    style={{...IS, marginBottom: 12}}/>
             <Segmented label="Surface" value={surface} accent={C.teal}
                        onChange={v => { touched.current = true; setSurface(v); }}
@@ -290,6 +302,52 @@ export default function MatchDay({ stats, journal, focusId }) {
                        options={[{v: true, l: "Yes"}, {v: false, l: "No"}]}/>
           </div>
 
+          {/* timed events — one tap stamps the time */}
+          <div style={{...CardS, padding: "18px 16px", marginBottom: 14, ...rise(5)}}>
+            <div style={{color: C.muted, fontSize: 11, fontWeight: 800, letterSpacing: 1.6,
+                         textTransform: "uppercase", marginBottom: 12, textAlign: "center"}}>Match events</div>
+            <div style={{display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8}}>
+              {EVENT_TYPES.map(t => (
+                <button key={t.key} type="button"
+                        onClick={() => { touched.current = true;
+                          const next = [...events, { id: momentId(), t: clockNow(), type: t.key, note: "" }];
+                          setEvents(next); persist({ events: next }); }}
+                        style={{padding: "14px 6px", borderRadius: 12, cursor: "pointer", fontFamily: BODY,
+                                background: C.surface, border: `1px solid ${C.line2}`, color: C.ink,
+                                WebkitTapHighlightColor: "transparent"}}>
+                  <div style={{fontSize: 20, lineHeight: 1}}>{t.icon}</div>
+                  <div style={{fontFamily: DISPLAY, fontSize: 26, color: C.blue, lineHeight: 1.1, marginTop: 4}}>
+                    {countOf(events, t.key)}
+                  </div>
+                  <div style={{fontSize: 10, fontWeight: 700, letterSpacing: .8, color: C.muted,
+                               textTransform: "uppercase", marginTop: 2}}>{t.label}</div>
+                </button>
+              ))}
+            </div>
+            {events.length > 0 && (
+              <div style={{marginTop: 12, display: "grid", gap: 5}}>
+                {[...events].reverse().map(e => {
+                  const type = EVENT_TYPES.find(x => x.key === e.type);
+                  return (
+                    <div key={e.id} style={{display: "flex", gap: 8, alignItems: "center",
+                                            background: C.bg, borderRadius: 8, padding: "7px 10px"}}>
+                      <span style={{fontSize: 14}}>{type?.icon}</span>
+                      <span style={{color: C.ink2, fontSize: 13, flex: 1}}>
+                        {e.t} — {type?.label.replace(/s$/, "")}
+                      </span>
+                      <button type="button"
+                              onClick={() => { touched.current = true;
+                                const next = events.filter(x => x.id !== e.id);
+                                setEvents(next); persist({ events: next }); }}
+                              style={{background: "none", border: "none", color: C.faint,
+                                      cursor: "pointer", fontSize: 14, padding: 0}}>✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* moments */}
           <div style={{...CardS, padding: "18px 16px", marginBottom: 18, ...rise(4)}}>
             <div style={{color: C.muted, fontSize: 11, fontWeight: 800, letterSpacing: 1.6,
@@ -339,7 +397,7 @@ export default function MatchDay({ stats, journal, focusId }) {
 
           <p style={{color: C.faint, fontSize: 12, textAlign: "center", marginTop: 12, lineHeight: 1.6}}>
             Passes, tackles and Taka counts aren't here on purpose — they come from
-            the match analytics afterwards, not from watching. Add those on the Stats
+            the match analytics afterwards, not from watching. Add those on the Matches
             tab later.
           </p>
         </>

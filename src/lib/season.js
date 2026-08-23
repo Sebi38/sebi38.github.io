@@ -56,6 +56,30 @@ export const monthLabel = date => {
 
 // The venue/kickoff string lives in notes (stats) or location (journal).
 // Split "Scrimmage · Witter Field · 12:00 PM" into its parts.
+// Venue as four separate things. Prefers the structured fields; falls back to
+// parsing the old combined `notes` string so nothing breaks before the
+// migration has run.
+export function venueOf(row = {}) {
+  if (row.fieldName != null || row.address != null) {
+    return {
+      fieldName: row.fieldName || "",
+      address: row.address || "",
+      kickoff: row.kickoff || "",
+      tag: row.tag || "",
+    };
+  }
+  const { venue, time, tag } = splitVenue(row.notes || row.location || "");
+  const isAddress = /^\d/.test(venue) || /,\s*[A-Z]{2}\s*\d{5}/.test(venue);
+  return { fieldName: isAddress ? "" : venue, address: isAddress ? venue : "",
+           kickoff: time, tag };
+}
+
+// One line for display: "Williamsburg Middle School · 2:15 PM"
+export function venueLine(row) {
+  const v = venueOf(row);
+  return [v.fieldName || v.address, v.kickoff].filter(Boolean).join(" · ");
+}
+
 export function splitVenue(text = "") {
   const parts = text.split("·").map(s => s.trim()).filter(Boolean);
   const time = parts.find(p => /\d{1,2}:\d{2}\s*(AM|PM)/i.test(p)) || "";
