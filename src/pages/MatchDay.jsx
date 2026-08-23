@@ -12,6 +12,7 @@ import { prettyDate, venueOf, isPlayed, todayISO as todayStr,
 import { surfaceForVenue } from '../data/venues.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { EVENT_TYPES, eventsOf, countOf } from '../lib/events.js';
+import { findEntry } from '../lib/journal.js';
 
 const clockNow = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -74,9 +75,8 @@ export default function MatchDay({ stats, journal, focusId }) {
     setFieldName(v.fieldName);
     setAddress(v.address);
     setEvents(eventsOf(fixture));
-    const j0 = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
-    setSurface(j0?.surface || surfaceForVenue(`${v.fieldName} ${v.address}`) || "grass");
-    const j = (journal || []).find(e => e.statId === fixture.id || e.date === fixture.date);
+    const j = findEntry(journal, fixture.id, fixture.date);
+    setSurface(j?.surface || surfaceForVenue(`${v.fieldName} ${v.address}`) || "grass");
     setMoments(momentsOf(j));
     setStatus("");
     setSavedAt(null);
@@ -131,7 +131,7 @@ export default function MatchDay({ stats, journal, focusId }) {
       : st));
 
     const allJournal = ld(SK.journal) || [];
-    const existing = allJournal.find(e => e.statId === fixture.id || e.date === fixture.date);
+    const existing = findEntry(allJournal, fixture.id, fixture.date);
     const momentList = m;
     const matchFacts = {
       goals, assists, minutes, started,

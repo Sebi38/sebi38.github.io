@@ -6,6 +6,7 @@ import { ld, sv, gid } from '../lib/storage.js';
 import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { questionsOf, openCount } from '../lib/questions.js';
+import { findEntry } from '../lib/journal.js';
 import { EVENT_TYPES, eventsOf, countsOf } from '../lib/events.js';
 import { upcoming, played, nextFixture, record, form, monthLabel, countdownLabel,
          prettyDate, venueOf, isPlayed, todayISO } from '../lib/season.js';
@@ -49,16 +50,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
   const saveStats = u => { setStats(u); sv(SK.stats, u); };
   const saveJournal = u => { setJournal(u); sv(SK.journal, u); };
 
-  // Journal entries are linked by statId. Older entries pre-date that link, so
-  // fall back to the date — but only when exactly one entry shares it, since
-  // some days have two fixtures.
-  const entryFor = (id, date) => {
-    const direct = journal.find(e => e.statId === id);
-    if (direct) return direct;
-    if (!date) return null;
-    const sameDay = journal.filter(e => !e.statId && e.date === date);
-    return sameDay.length === 1 ? sameDay[0] : null;
-  };
+  const entryFor = (id, date) => findEntry(journal, id, date);
 
   // A match = the stat row (facts) plus its journal entry (reflection).
   const rows = useMemo(() => stats.map(s => {
@@ -298,8 +290,9 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                 const hasDetail = r.rating!=null || r.wentWell || r.toImprove || r.questionsForCoaches || r.moments.length || isPlayed(r);
                 return (
                   <div key={r.id} style={{...CardS,overflow:"hidden",borderLeft:`3px solid ${res.fg}`,...rise(i)}}>
-                    <div onClick={()=>setExpanded(open?null:r.id)}
-                         style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:16,cursor:"pointer"}}>
+                    <div onClick={()=>hasDetail&&setExpanded(open?null:r.id)}
+                         style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:16,
+                                 cursor:hasDetail?"pointer":"default"}}>
                       <div style={{textAlign:"center",minWidth:48,flexShrink:0}}>
                         <div style={{fontFamily:DISPLAY,fontSize:28,color:C.ink,lineHeight:1}}>{r.date.slice(8)}</div>
                         <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:"uppercase"}}>
@@ -333,10 +326,10 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                               border:`1px solid ${cd==="Today"?C.red+"55":C.line2}`,padding:"5px 10px",
                               borderRadius:20,whiteSpace:"nowrap"}}>{cd||"TBC"}</span>}
                       </div>
-                      <span style={{color:C.faint,fontSize:16,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</span>
+                      {hasDetail && <span style={{color:C.faint,fontSize:16,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</span>}
                     </div>
 
-                    {open && (
+                    {open && hasDetail && (
                       <div style={{padding:"0 18px 18px",borderTop:`1px solid ${C.line}`,paddingTop:16}}>
                         {isPlayed(r) && (
                           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(62px,1fr))",gap:8,

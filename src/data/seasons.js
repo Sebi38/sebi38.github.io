@@ -38,24 +38,36 @@ export const SEASONS = [
     label: "2025/26",
     team: "ASA MLSNext U13",
     prefixes: ["fa25", "sp26"],
+    from: "2025-08-01", to: "2026-07-31",
   },
   {
     id: "2026-27",
     label: "2026/27",
     team: "ASA MLSNext U14",
     prefixes: ["fa26", "sp27"],
+    from: "2026-08-01", to: "2027-07-31",
   },
 ];
 
-// Does this row id belong to the season?
-export const inSeason = (season, id = "") =>
-  season.prefixes.some(p => id.startsWith(p + "-"));
+// Does this row belong to the season?
+//
+// Seeded rows are identified by their id prefix. A match added by hand gets a
+// generated id ("mt626j8c6mmoy") that matches no prefix, so it also has to be
+// placed by date — otherwise adding a match while a season is selected made it
+// vanish from the list, the record and the form guide, and it looked as though
+// the save had failed. A campaign runs August to July.
+export const inSeason = (season, row = {}) => {
+  const id = (typeof row === "string" ? row : row.id) || "";
+  if (season.prefixes.some(p => id.startsWith(p + "-"))) return true;
+  const date = typeof row === "string" ? "" : row.date || "";
+  return Boolean(date) && date >= season.from && date <= season.to;
+};
 
-export const seasonFor = (id = "") => SEASONS.find(s => inSeason(s, id)) || null;
+export const seasonFor = (row = {}) => SEASONS.find(s => inSeason(s, row)) || null;
 
 // Rows belonging to a season id, or everything for "all".
 export const filterBySeason = (rows, seasonId) => {
   if (seasonId === "all") return rows;
   const s = SEASONS.find(x => x.id === seasonId);
-  return s ? rows.filter(r => inSeason(s, r.id || "")) : rows;
+  return s ? rows.filter(r => inSeason(s, r)) : rows;
 };

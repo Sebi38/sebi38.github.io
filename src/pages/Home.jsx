@@ -4,7 +4,7 @@ import { C, CardS, GlassS, DISPLAY, BODY, PAGE, rise, RESULT } from '../ui/theme
 import StatTile from '../ui/StatTile.jsx';
 import FormGuide from '../ui/FormGuide.jsx';
 import FixtureCard from '../ui/FixtureCard.jsx';
-import { nextFixture, form, record, played, prettyDate, splitVenue, countdownLabel } from '../lib/season.js';
+import { nextFixture, form, record, played, prettyDate, venueOf, countdownLabel } from '../lib/season.js';
 import heroPhoto from '../assets/sebi-hero.jpg';
 import avatar from '../assets/sebi.jpg';
 
@@ -15,7 +15,11 @@ const gallery = Object.values(
 
 function Hero({ next }) {
   const cd = next ? countdownLabel(next.date) : null;
-  const { venue, time } = next ? splitVenue(next.notes || "") : {};
+  // venueOf prefers the structured fieldName/address/kickoff and only falls
+  // back to parsing `notes`, which a hand-added match does not have at all.
+  const v = next ? venueOf(next) : {};
+  const venue = v.fieldName || v.address || "";
+  const time = v.kickoff || "";
   return (
     <section style={{position:"relative",minHeight:"clamp(440px,66vh,600px)",display:"flex",alignItems:"flex-end",overflow:"hidden"}}>
       <img src={heroPhoto} alt="" aria-hidden="true"

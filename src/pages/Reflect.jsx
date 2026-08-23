@@ -7,6 +7,7 @@ import Empty from '../ui/Empty.jsx';
 import { prettyDate, isPlayed, todayISO,
          fixtureChoices, fixtureLabel, defaultReviewFixture } from '../lib/season.js';
 import { questionsOf, questionsToText, mergeQuestionText } from '../lib/questions.js';
+import { findEntry } from '../lib/journal.js';
 
 // Seb's page. Three questions and nothing else — the reflection is the
 // development work, so it should not be buried in a fifteen-field form.
@@ -26,7 +27,7 @@ export default function Reflect({ stats, journal, focusId }) {
   const game = useMemo(() => games.find(g => g.id === gameId) || null, [games, gameId]);
 
   const entry = useMemo(
-    () => (journal || []).find(e => e.statId === gameId || (game && e.date === game.date)) || null,
+    () => (game ? findEntry(journal, gameId, game.date) : null),
     [journal, gameId, game]
   );
 
@@ -57,9 +58,13 @@ export default function Reflect({ stats, journal, focusId }) {
   const save = useCallback(() => {
     if (!game) return;
     const all = ld(SK.journal) || [];
-    if (entry) {
-      sv(SK.journal, all.map(e => e.id === entry.id
-        ? { ...e, rating, wentWell, toImprove, questionsForCoaches: mergeQuestionText(questions, questionsOf(entry)), statId: game.id } : e));
+    // Resolve against what is actually stored, not the `journal` prop: the prop
+    // is only refreshed on a tab change, so relying on it made every autosave
+    // after the first insert another duplicate entry.
+    const current = findEntry(all, game.id, game.date);
+    if (current) {
+      sv(SK.journal, all.map(e => e.id === current.id
+        ? { ...e, rating, wentWell, toImprove, questionsForCoaches: mergeQuestionText(questions, questionsOf(current)), statId: game.id } : e));
     } else {
       sv(SK.journal, [{
         id: gid(), date: game.date, opponent: game.opponent, location: game.notes || "",

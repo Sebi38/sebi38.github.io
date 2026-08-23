@@ -171,7 +171,10 @@ export function parseFathomRecap(raw) {
 // for reference only — never written into a match automatically, because a
 // number misattributed to the wrong game is worse than no number at all.
 export function findStats(parsed) {
-  const hay = [parsed.purpose, ...parsed.takeaways, ...parsed.topics].join(" ");
+  // Firebase does not store empty arrays, so a session saved with no takeaways
+  // or no topics comes back from the database with the key missing entirely.
+  const list = v => (Array.isArray(v) ? v : []);
+  const hay = [parsed?.purpose || "", ...list(parsed?.takeaways), ...list(parsed?.topics)].join(" ");
   // Longer phrases first so "short passes" wins over "passes".
   const re = /(\d+)\s+(crucial interceptions|crucial tackles|short passes|long passes|ground duels|interceptions|clearances|tackles|passes|assists|shots|goals)/gi;
   const seen = new Map();
