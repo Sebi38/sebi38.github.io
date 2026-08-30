@@ -3,9 +3,11 @@ import { SK } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { parseFathomRecap, parseBundle, findStats } from '../lib/fathom.js';
 import { prettyDate } from '../lib/season.js';
+import { KINDS, kindLabel, kindOf, byDateDesc } from '../lib/coaching.js';
 import { C, CardS, DISPLAY, BODY, IS, LS, BP, BS, RESULT, rise } from '../ui/theme.js';
 import Empty from '../ui/Empty.jsx';
 import Modal from '../ui/Modal.jsx';
+import Pill from '../ui/Pill.jsx';
 
 const Block = ({ title, items, color, icon }) => (
   !items?.length ? null : (
@@ -20,20 +22,33 @@ const Block = ({ title, items, color, icon }) => (
   )
 );
 
-// 1:1 coaching sessions with GIKA10, recorded by Fathom.
-// Imported by pasting the recap email — the content is personal, so it is
-// never stored in this repository, only in the database behind the login.
+// Every session someone ran with Sebi: the GIKA10 1:1 reviews recorded by
+// Fathom, and the First Touch Aid academy Zooms. Both used to be scattered —
+// the GIKA10 recaps here, the FTA sessions filed as Training "Resources"
+// alongside playlists and PDFs. A session is not a resource, so they are now
+// one list.
+//
+// GIKA10 recaps are imported by pasting the recap email — the content is
+// personal, so it is never stored in this repository, only in the database
+// behind the login.
 export default function CoachingSessions() {
   const [sessions, setSessions] = useState(() => ld(SK.coaching) || []);
   const [importing, setImporting] = useState(false);
   const [raw, setRaw] = useState("");
   const [preview, setPreview] = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [kind, setKind] = useState("all");
 
   const persist = u => { setSessions(u); sv(SK.coaching, u); };
 
-  const ordered = useMemo(
-    () => [...sessions].sort((a,b) => (b.date||"").localeCompare(a.date||"")), [sessions]);
+  const ordered = useMemo(() => {
+    const list = kind === "all" ? sessions : sessions.filter(s => kindOf(s) === kind);
+    return [...list].sort(byDateDesc);
+  }, [sessions, kind]);
+
+  // Only offer a filter once there is more than one kind to filter.
+  const present = useMemo(
+    () => Object.keys(KINDS).filter(k => sessions.some(s => kindOf(s) === k)), [sessions]);
 
   // Accepts either one pasted recap email or a bundle of already-parsed ones.
   const [batch, setBatch] = useState(null);
@@ -75,33 +90,67 @@ export default function CoachingSessions() {
   return (
     <div>
       <div style={{display:"flex",gap:12,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{color:C.muted,fontSize:13}}>
-          {sessions.length} {sessions.length===1?"session":"sessions"} imported
-        </div>
+        {present.length > 1 && (
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <Pill label={`All (${sessions.length})`} active={kind==="all"} onClick={()=>setKind("all")}/>
+            {present.map(k => (
+              <Pill key={k} active={kind===k} onClick={()=>setKind(k)}
+                    label={`${KINDS[k].label} (${sessions.filter(s=>kindOf(s)===k).length})`}/>
+            ))}
+          </div>
+        )}
+        {present.length <= 1 && (
+          <div style={{color:C.muted,fontSize:13}}>
+            {sessions.length} {sessions.length===1?"session":"sessions"}
+          </div>
+        )}
         <button onClick={()=>{setImporting(true);setRaw("");setPreview(null);}}
                 style={{...BP,marginLeft:"auto"}}>+ Import recap</button>
       </div>
 
       {ordered.length === 0 ? (
-        <Empty icon="🧑‍🏫" text="No coaching sessions yet. Paste a Fathom recap email to bring one in."/>
+        <Empty icon="🧑‍🏫" text={kind==="all"
+          ? "No coaching sessions yet. Paste a Fathom recap email to bring one in."
+          : `No ${kindLabel(kind)} sessions yet.`}/>
       ) : (
         <div style={{display:"grid",gap:10}}>
           {ordered.map((s,i)=>{
             const open = expanded === s.id;
             const stats = findStats(s);
+            const k = kindOf(s);
+            const accent = C[KINDS[k]?.color] || C.violet;
+            // A GIKA10 recap is identified by when it happened — they are
+            // weekly and all called the same thing. An FTA session has a real
+            // title ("Scanning & Awareness"), so that leads instead.
+            const headline = k === "fta" && s.title
+              ? s.title
+              : (s.date ? prettyDate(s.date) : "Undated session");
+            // Minutes only here for a kind whose headline is the title —
+            // otherwise the headline already says it.
+            const sub = [k === "fta" && s.date ? prettyDate(s.date) : null,
+                         k === "fta" && s.minutes ? `${s.minutes} min` : null,
+                         s.purpose || (k === "fta" ? null : s.title)].filter(Boolean).join(" · ");
             return (
-              <div key={s.id} style={{...CardS,overflow:"hidden",borderLeft:`3px solid ${C.violet}`,...rise(i)}}>
+              <div key={s.id} style={{...CardS,overflow:"hidden",borderLeft:`3px solid ${accent}`,...rise(i)}}>
                 <div onClick={()=>setExpanded(open?null:s.id)}
                      style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:C.ink,fontWeight:700,fontSize:15}}>
-                      {s.date ? prettyDate(s.date) : "Undated session"}
-                      {s.minutes ? <span style={{color:C.muted,fontWeight:500}}> · {s.minutes} min</span> : null}
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <span style={{color:accent,fontSize:9.5,fontWeight:800,letterSpacing:1.3,
+                                    background:`${accent}1f`,border:`1px solid ${accent}44`,
+                                    padding:"2px 7px",borderRadius:5,textTransform:"uppercase"}}>
+                        {kindLabel(k)}
+                      </span>
+                      <span style={{color:C.ink,fontWeight:700,fontSize:15}}>
+                        {headline}
+                        {k !== "fta" && s.minutes
+                          ? <span style={{color:C.muted,fontWeight:500}}> · {s.minutes} min</span> : null}
+                      </span>
                     </div>
-                    <div style={{color:C.muted,fontSize:12.5,marginTop:3,overflow:"hidden",
-                                 textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {s.purpose || s.title}
-                    </div>
+                    {sub && (
+                      <div style={{color:C.muted,fontSize:12.5,marginTop:3,overflow:"hidden",
+                                   textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</div>
+                    )}
                   </div>
                   {s.takeaways?.length ? (
                     <span style={{color:C.violet,fontSize:11,fontWeight:700,background:"rgba(155,89,182,.14)",
@@ -149,8 +198,10 @@ export default function CoachingSessions() {
                     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
                       {s.shareUrl && (
                         <a href={s.shareUrl} target="_blank" rel="noopener noreferrer"
-                           style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,
-                                   borderColor:C.violet+"44",textDecoration:"none"}}>🎥 Watch on Fathom</a>
+                           style={{...BS,padding:"6px 14px",fontSize:12,color:accent,
+                                   borderColor:accent+"44",textDecoration:"none"}}>
+                          🎥 {s.shareUrl.includes("fathom.video") ? "Watch on Fathom" : "Watch the session"}
+                        </a>
                       )}
                       <button onClick={()=>remove(s.id)}
                               style={{...BS,padding:"6px 14px",fontSize:12,color:C.red,borderColor:C.red+"33"}}>🗑 Remove</button>

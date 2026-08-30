@@ -17,7 +17,7 @@ export default function Training() {
   const [showAdd, setShowAdd] = useState(false);
   const [cat, setCat] = useState("All");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState("drills");
+  const [view, setView] = useState("coaching");
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
 
@@ -53,7 +53,7 @@ export default function Training() {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <h2 style={H2}>📚 TRAINING</h2>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <ViewToggle view={view} setView={setView} options={[{v:"drills",l:"My Drills"},{v:"resources",l:"Resources"},{v:"coaching",l:"Coaching"}]}/>
+          <ViewToggle view={view} setView={setView} options={[{v:"coaching",l:"Coaching"},{v:"drills",l:"My Drills"},{v:"resources",l:"Resources"}]}/>
           {view==="drills"&&<button onClick={()=>{setForm(EMPTY_FORM);setEditId(null);setShowAdd(true)}} style={BP}>+ Add Drill</button>}
         </div>
       </div>

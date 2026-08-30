@@ -4,6 +4,7 @@ import { fbSnapToArray, arrayToFbObj } from './storage.js';
 import { readOnce } from './net.js';
 import { surfaceForVenue } from '../data/venues.js';
 import { toMoments } from './moments.js';
+import { sessionKind, toSession, mergeSessions } from './coaching.js';
 import { FALL25_STATS } from '../data/fall2025.js';
 import { SPRING26_STATS, SPRING26_JOURNAL } from '../data/spring2026.js';
 import { FALL26_STATS, FALL26_JOURNAL } from '../data/fall2026.js';
@@ -120,6 +121,29 @@ async function splitVenueFields(alreadyRun) {
   await seedRef('venue-split-1').set(true);
 }
 
+// The GIKA10 1:1 reviews and the FTA academy Zooms were filed as Training
+// "Resources" — the same shelf as a YouTube playlist or a PDF. They are not
+// resources: each one happened on a date, with someone, about Sebi. They belong
+// in Coaching alongside the imported Fathom recaps.
+//
+// Moves only rows that are themselves a session (see sessionKind); the
+// playlists and programs that merely mention FTA stay where they are. A session
+// already imported in fuller form is not duplicated — the parsed copy wins and
+// the bare link is dropped.
+async function consolidateCoaching(alreadyRun) {
+  if (alreadyRun['coaching-consolidate-1']) return;
+  const resources = fbSnapToArray(await readOnce(dataRef('trainRes')));
+  const moving = resources.filter(r => sessionKind(r));
+  if (moving.length) {
+    const sessions = fbSnapToArray(await readOnce(dataRef('coaching')));
+    const merged = mergeSessions(sessions, moving.map(r => toSession(r)));
+    await dataRef('coaching').set(arrayToFbObj(merged));
+    const keep = resources.filter(r => !sessionKind(r));
+    await dataRef('trainRes').set(arrayToFbObj(keep));
+  }
+  await seedRef('coaching-consolidate-1').set(true);
+}
+
 // Seed anything the database has not seen. Every batch carries its own flag,
 // so this is safe on every load and safe to re-run after adding a season.
 //
@@ -137,4 +161,5 @@ export async function runSeedsIfNeeded() {
   await applyVenueSurfaces(alreadyRun);
   await migrateMoments(alreadyRun);
   await splitVenueFields(alreadyRun);
+  await consolidateCoaching(alreadyRun);
 }
