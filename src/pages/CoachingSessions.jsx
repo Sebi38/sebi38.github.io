@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { SK } from '../config.js';
 import { ld, sv, gid } from '../lib/storage.js';
 import { parseFathomRecap, parseBundle, findStats } from '../lib/fathom.js';
@@ -52,6 +52,22 @@ export default function CoachingSessions() {
 
   // Accepts either one pasted recap email or a bundle of already-parsed ones.
   const [batch, setBatch] = useState(null);
+  const fileRef = useRef(null);
+
+  // Picking the file beats selecting and copying a few hundred lines of JSON
+  // out of a text editor. Read here in the browser, same as a paste — it is
+  // never uploaded anywhere, it goes straight to your database.
+  const onFile = async e => {
+    const f = e.target.files?.[0];
+    e.target.value = "";                    // so the same file can be re-picked
+    if (!f) return;
+    try {
+      doParse(await f.text());
+    } catch {
+      setPreview({ ok: false, error: "Couldn't read that file." });
+    }
+  };
+
   const doParse = text => {
     setRaw(text);
     if (!text.trim()) { setPreview(null); setBatch(null); return; }
@@ -218,10 +234,21 @@ export default function CoachingSessions() {
         <Modal title="IMPORT A COACHING RECAP" onClose={()=>setImporting(false)} wide>
           <div style={{display:"grid",gap:14}}>
             <p style={{color:C.ink3,fontSize:13.5,lineHeight:1.6,margin:0}}>
-              Open the Fathom recap email, select all of it, and paste it below. It is read
-              here in your browser and saved to your database — it never goes near the
-              public code.
+              Pick a bundle file, or open a Fathom recap email, select all of it and paste
+              it below. Either way it is read here in your browser and saved straight to
+              your database — the recaps are personal, so they never go near the public
+              code that anyone can download.
             </p>
+            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <input ref={fileRef} type="file" accept=".json,application/json,.txt,text/plain"
+                     onChange={onFile} style={{display:"none"}}/>
+              <button type="button" onClick={()=>fileRef.current?.click()}
+                      style={{...BS,padding:"10px 18px",fontSize:13,color:C.blue,borderColor:C.blue+"44"}}>
+                📂 Choose a file…
+              </button>
+              <span style={{color:C.faint,fontSize:12.5}}>or paste below</span>
+            </div>
+
             <textarea value={raw} onChange={e=>doParse(e.target.value)} rows={8}
                       placeholder="Paste a recap email — or the whole bundle file — here…"
                       style={{...IS,resize:"vertical",fontSize:13,lineHeight:1.5,fontFamily:"monospace"}}/>
