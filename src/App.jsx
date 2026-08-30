@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SK } from './config.js';
-import { ld } from './lib/storage.js';
+import { ld, flushOutbox, pendingNodes } from './lib/storage.js';
 import { onAuthReady } from './lib/firebase.js';
 import { loadFirebaseToLocal } from './lib/sync.js';
 import { todayISO } from './lib/season.js';
@@ -32,12 +32,26 @@ const PAGES = {
 
 // Shown when the database could not be reached. The app keeps working from
 // the localStorage cache and mirrors edits up once the connection returns.
-function OfflineBar() {
+function OfflineBar({ unsynced }) {
   return (
     <div style={{background:"rgba(244,162,97,.12)",borderBottom:"1px solid rgba(244,162,97,.28)",
                  color:"#f4a261",fontSize:12.5,fontWeight:600,padding:"8px 16px",textAlign:"center",
                  fontFamily:"'Outfit',sans-serif"}}>
-      ⚡ Offline — showing saved data. Anything you enter is kept and syncs when you're back online.
+      ⚡ Offline — showing saved data. Anything you enter is kept on this device
+      {unsynced ? " and will sync when you're back online." : " and syncs when you're back online."}
+    </div>
+  );
+}
+
+// Everything entered while offline is still waiting to reach the database.
+// Worth saying out loud: it means "don't clear this browser's data yet".
+function UnsyncedBar() {
+  return (
+    <div style={{background:"rgba(74,124,204,.12)",borderBottom:"1px solid rgba(74,124,204,.28)",
+                 color:"#4a7ccc",fontSize:12.5,fontWeight:600,padding:"8px 16px",textAlign:"center",
+                 fontFamily:"'Outfit',sans-serif"}}>
+      ⏳ Some match data is saved on this device but not yet in the database — it will
+      upload on its own.
     </div>
   );
 }
@@ -74,9 +88,22 @@ export default function App() {
   const [journalData, setJournalData] = useState([]);
   const [dbReady, setDbReady] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [unsynced, setUnsynced] = useState(false);
 
   // Firebase restores the session asynchronously on load.
   useEffect(() => onAuthReady(u => { setUser(u); setAuthChecked(true); }), []);
+
+  // Anything written while offline sits in the outbox until it lands. Retry
+  // when the connection comes back — a match logged at a pitch with no signal
+  // should not need anyone to remember to reopen the app.
+  useEffect(() => {
+    const check = () => setUnsynced(pendingNodes().length > 0);
+    const retry = () => { flushOutbox().finally(check); };
+    window.addEventListener('online', retry);
+    const t = setInterval(() => { if (navigator.onLine) retry(); else check(); }, 30000);
+    check();
+    return () => { window.removeEventListener('online', retry); clearInterval(t); };
+  }, [user]);
 
   // Reflect the active tab in the URL, and follow back/forward.
   useEffect(() => {
@@ -115,6 +142,7 @@ export default function App() {
       if (cancelled) return;
       setStatsData(ld(SK.stats) || []);
       setJournalData(ld(SK.journal) || []);
+      setUnsynced(pendingNodes().length > 0);
       setDbReady(true);
     })();
     return () => { cancelled = true; };
@@ -125,6 +153,7 @@ export default function App() {
     if (!user || !dbReady) return;
     setStatsData(ld(SK.stats) || []);
     setJournalData(ld(SK.journal) || []);
+    setUnsynced(pendingNodes().length > 0);
   }, [user, dbReady, page]);
 
   if (!authChecked) return <Splash text="Checking sign-in…"/>;
@@ -136,7 +165,7 @@ export default function App() {
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#0a0f1e 0%,#0d1526 100%)",fontFamily:"'Outfit',sans-serif"}}>
       <Nav active={page} setActive={setPage}/>
-      {offline && <OfflineBar/>}
+      {offline ? <OfflineBar unsynced={unsynced}/> : unsynced && <UnsyncedBar/>}
       {/* Keyed by tab so each one gets a fresh boundary: a page that throws
           no longer takes the nav — and the rest of the site — down with it. */}
       <ErrorBoundary key={page}>

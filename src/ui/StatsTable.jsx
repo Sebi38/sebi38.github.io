@@ -1,7 +1,8 @@
 import { C, RESULT } from './theme.js';
 import { hasValue } from '../lib/numbers.js';
+import { matchStats } from '../lib/stats.js';
 
-const COLUMNS = ["Date","Opponent","Result","Score","Pos","St","Min","G","A","Sh","SOT","Pass","Tkl","T+","T−",""];
+const COLUMNS = ["Date","Opponent","Result","Score","Pos","St","Min","G","A","Sh","SOT","Pass","Tkl","Cor","FK","T+","T−",""];
 
 const Taka = ({ value, color }) => (
   <td style={{padding:"12px 8px"}}>
@@ -25,6 +26,9 @@ export default function StatsTable({ rows, onEdit, onDelete }) {
         </tr></thead>
         <tbody>{rows.map(s=>{
           const r = RESULT[s.result] || RESULT["—"];
+          // Derived, not raw: shots on goal tapped during the match count here
+          // too, and every value is coerced to a number.
+          const m = matchStats(s);
           return (
           <tr key={s.id} style={{borderBottom:`1px solid ${C.line}`}}>
             <td style={{color:C.ink3,padding:"12px 8px",whiteSpace:"nowrap"}}>{s.date}</td>
@@ -43,13 +47,15 @@ export default function StatsTable({ rows, onEdit, onDelete }) {
                 : s.started===false?<span title="Off the bench" style={{color:C.gold,fontWeight:700,fontSize:11}}>sub</span>
                 : <span style={{color:C.faint}}>—</span>}
             </td>
-            <td style={{color:C.ink3,padding:"12px 8px"}}>{s.minutes}'</td>
-            <td style={{color:s.goals>0?C.red:C.faint,padding:"12px 8px",fontWeight:s.goals>0?700:400}}>{s.goals}</td>
-            <td style={{color:s.assists>0?RESULT.W.fg:C.faint,padding:"12px 8px",fontWeight:s.assists>0?700:400}}>{s.assists}</td>
-            <td style={{color:C.ink3,padding:"12px 8px"}}>{s.shots||0}</td>
-            <td style={{color:C.ink3,padding:"12px 8px"}}>{s.sot||0}</td>
-            <td style={{color:C.ink3,padding:"12px 8px"}}>{s.passes||0}</td>
-            <td style={{color:C.ink3,padding:"12px 8px"}}>{s.tackles||0}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.minutes}'</td>
+            <td style={{color:m.goals>0?C.red:C.faint,padding:"12px 8px",fontWeight:m.goals>0?700:400}}>{m.goals}</td>
+            <td style={{color:m.assists>0?RESULT.W.fg:C.faint,padding:"12px 8px",fontWeight:m.assists>0?700:400}}>{m.assists}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.shots}</td>
+            <td style={{color:m.sot>0?C.blue:C.ink3,padding:"12px 8px",fontWeight:m.sot>0?700:400}}>{m.sot}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.passes}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.tackles}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.corners}</td>
+            <td style={{color:C.ink3,padding:"12px 8px"}}>{m.freeKicks}</td>
             <Taka value={s.takaPos} color={RESULT.W.fg}/>
             <Taka value={s.takaNeg} color={RESULT.L.fg}/>
             <td style={{padding:"12px 4px",whiteSpace:"nowrap"}}>

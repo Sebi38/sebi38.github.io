@@ -7,9 +7,10 @@ import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { questionsOf, openCount } from '../lib/questions.js';
 import { findEntry } from '../lib/journal.js';
-import { EVENT_TYPES, eventsOf, countsOf } from '../lib/events.js';
-import { upcoming, played, nextFixture, record, form, monthLabel, countdownLabel,
-         prettyDate, venueOf, isPlayed, todayISO } from '../lib/season.js';
+import { EVENT_TYPES, eventsOf } from '../lib/events.js';
+import { matchStats, hasStats, hasHappened, totals } from '../lib/stats.js';
+import { nextFixture, record, form, monthLabel, countdownLabel,
+         prettyDate, venueOf, isPlayed } from '../lib/season.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, IS, LS, BP, BS, RESULT, rC, rise } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Empty from '../ui/Empty.jsx';
@@ -22,6 +23,29 @@ import StatsTable from '../ui/StatsTable.jsx';
 const EMPTY = {date:"",opponent:"",fieldName:"",address:"",kickoff:"",surface:"grass",positions:["","",""],started:null,
   result:"—",scoreFor:"",scoreAgainst:"",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,
   tackles:0,takaPos:"",takaNeg:"",takaLink:"",veoLink:""};
+
+// One number on the face of a match card.
+const Chip = ({ icon, value, label, color = C.ink2, strong }) => (
+  <span style={{display:"inline-flex",alignItems:"baseline",gap:5,fontSize:12,lineHeight:1,
+                padding: strong ? "5px 10px" : "4px 8px", borderRadius:7, whiteSpace:"nowrap",
+                background: strong ? `${color}1f` : C.bg,
+                border:`1px solid ${strong ? color+"55" : C.line}`}}>
+    <span style={{fontSize: strong ? 13 : 11.5}}>{icon}</span>
+    <strong style={{color, fontWeight:800, fontSize: strong ? 13.5 : 12.5}}>{value}</strong>
+    <span style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:.9,textTransform:"uppercase"}}>{label}</span>
+  </span>
+);
+
+// Film links sit on the card face, not behind the expander: the whole point of
+// a link to Veo or Taka is that it is one tap away after a match.
+const FilmLink = ({ href, label, color }) => (
+  <a href={href} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+     style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11.5,fontWeight:700,
+             letterSpacing:.6,textDecoration:"none",color,padding:"4px 10px",borderRadius:7,
+             background:`${color}14`,border:`1px solid ${color}44`,whiteSpace:"nowrap"}}>
+    🎥 {label}
+  </a>
+);
 
 const Section = ({ children }) => (
   <div style={{color:C.blue,fontSize:11,fontWeight:700,letterSpacing:2,paddingBottom:6,
@@ -59,21 +83,24 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
       rating: e.rating, wentWell: e.wentWell, toImprove: e.toImprove,
       questionsForCoaches: e.questionsForCoaches,
       surface: e.surface || surfaceForVenue(s.notes || "") || "grass",
-      moments: momentsOf(e), questions: questionsOf(e), events: eventsOf(s), takaLink: e.takaLink, veoLink: e.veoLink };
+      moments: momentsOf(e), questions: questionsOf(e), events: eventsOf(s),
+      // Links were only ever written to the journal entry, but a row imported
+      // or hand-edited can carry them too — read both.
+      takaLink: e.takaLink || s.takaLink || "", veoLink: e.veoLink || s.veoLink || "",
+      // Derived once, here, so the card, the table and the totals agree.
+      m: matchStats(s) };
   }), [stats, journal]);
 
   const scoped = useMemo(() => filterBySeason(rows, season), [rows, season]);
-  const counts = useMemo(() => {
-    const t = todayISO();
-    return { played: scoped.filter(r => isPlayed(r) || r.date <= t).length,
-             upcoming: scoped.filter(r => !isPlayed(r) && r.date > t).length };
-  }, [scoped]);
+  const counts = useMemo(() => ({
+    played: scoped.filter(r => hasHappened(r)).length,
+    upcoming: scoped.filter(r => !hasHappened(r)).length,
+  }), [scoped]);
 
   const list = useMemo(() => {
-    const t = todayISO();
     let f = scoped;
-    if (view === "played")   f = f.filter(r => isPlayed(r) || r.date <= t);
-    if (view === "upcoming") f = f.filter(r => !isPlayed(r) && r.date > t);
+    if (view === "played")   f = f.filter(r => hasHappened(r));
+    if (view === "upcoming") f = f.filter(r => !hasHappened(r));
     if (search.trim()) {
       const q = search.toLowerCase();
       f = f.filter(r => r.opponent.toLowerCase().includes(q) || r.date.includes(q) ||
@@ -103,6 +130,10 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
 
   const next = nextFixture(scoped);
   const rec = record(scoped);
+  // Sebi's own numbers for the same set of matches. Separate from the team
+  // record above it, because "2 goals" and "18 goals for" are different facts
+  // and reading them off one row was the quickest way to conflate them.
+  const mine = useMemo(() => totals(scoped), [scoped]);
   const current = SEASONS.find(s => s.id === season);
 
   // ── editing match facts ──────────────────────────────────────────────────
@@ -114,7 +145,7 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
       result:r.result||"—", scoreFor:hasValue(r.scoreFor)?r.scoreFor:"", scoreAgainst:hasValue(r.scoreAgainst)?r.scoreAgainst:"",
       minutes:r.minutes||0, goals:r.goals||0, assists:r.assists||0, shots:r.shots||0, sot:r.sot||0,
       passes:r.passes||0, tackles:r.tackles||0, takaPos:hasValue(r.takaPos)?r.takaPos:"",
-      takaNeg:hasValue(r.takaNeg)?r.takaNeg:"", takaLink:r._entry?.takaLink||"", veoLink:r._entry?.veoLink||"" });
+      takaNeg:hasValue(r.takaNeg)?r.takaNeg:"", takaLink:r.takaLink||"", veoLink:r.veoLink||"" });
     setEditing(r.id || "new");
   };
 
@@ -214,13 +245,30 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
           )}
         </div>
         <div className="record">
-          {[{v:rec.played,l:"Played",c:C.ink},{v:rec.w,l:"Won",c:RESULT.W.fg},{v:rec.d,l:"Drawn",c:RESULT.D.fg},
+          {[{v:mine.matches,l:"Played",c:C.ink,
+             s:mine.results<mine.matches?`${mine.matches-mine.results} no score`:null},
+            {v:rec.w,l:"Won",c:RESULT.W.fg},{v:rec.d,l:"Drawn",c:RESULT.D.fg},
             {v:rec.l,l:"Lost",c:RESULT.L.fg},{v:rec.gf,l:"For",c:C.blue},{v:rec.ga,l:"Against",c:C.muted}].map(c=>(
             <div key={c.l} style={{textAlign:"center",padding:"10px 4px"}}>
               <div style={{fontFamily:DISPLAY,fontSize:30,lineHeight:1,color:c.c}}>{c.v}</div>
               <div style={{color:C.muted,fontSize:9.5,fontWeight:800,letterSpacing:1.4,textTransform:"uppercase",marginTop:6}}>{c.l}</div>
+              {c.s && <div style={{color:C.faint,fontSize:9.5,marginTop:3}}>{c.s}</div>}
             </div>
           ))}
+        </div>
+
+        <div style={{borderTop:`1px solid ${C.line}`,marginTop:12,paddingTop:12,display:"flex",
+                     alignItems:"center",gap:14,flexWrap:"wrap"}}>
+          <span style={{color:C.faint,fontSize:10,fontWeight:800,letterSpacing:1.6,textTransform:"uppercase"}}>
+            Sebi · {mine.matches} {mine.matches === 1 ? "match" : "matches"}
+          </span>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+            <Chip icon="⚽" value={mine.goals} label="Goals" color={C.red} strong={mine.goals > 0}/>
+            <Chip icon="🅰️" value={mine.assists} label="Assists" color={RESULT.W.fg} strong={mine.assists > 0}/>
+            <Chip icon="⏱" value={mine.minutes.toLocaleString()} label="Min" color={C.gold}/>
+            <Chip icon="🎯" value={mine.sot} label="On goal" color={C.blue}/>
+            <Chip icon="🛡" value={mine.tackles} label="Tackles" color={C.teal}/>
+          </div>
         </div>
       </div>
 
@@ -287,12 +335,19 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                 const score = hasValue(r.scoreFor)&&hasValue(r.scoreAgainst) ? `${r.scoreFor}–${r.scoreAgainst}` : null;
                 const open = expanded === r.id;
                 const cd = isPlayed(r) ? null : countdownLabel(r.date);
-                const hasDetail = r.rating!=null || r.wentWell || r.toImprove || r.questionsForCoaches || r.moments.length || isPlayed(r);
+                const done = hasHappened(r);
+                const m = r.m;
+                const film = r.veoLink || r.takaLink;
+                // The stats grid used to be gated on a recorded result, so a
+                // match logged in full but never given a score showed nothing.
+                const showStats = hasStats(r) || done;
+                const hasDetail = showStats || r.rating!=null || r.wentWell || r.toImprove ||
+                                  r.questionsForCoaches || r.moments.length;
                 return (
                   <div key={r.id} style={{...CardS,overflow:"hidden",borderLeft:`3px solid ${res.fg}`,...rise(i)}}>
                     <div onClick={()=>hasDetail&&setExpanded(open?null:r.id)}
-                         style={{padding:"16px 18px",display:"flex",alignItems:"center",gap:16,
-                                 cursor:hasDetail?"pointer":"default"}}>
+                         style={{padding:"16px 18px",cursor:hasDetail?"pointer":"default"}}>
+                     <div style={{display:"flex",alignItems:"center",gap:16}}>
                       <div style={{textAlign:"center",minWidth:48,flexShrink:0}}>
                         <div style={{fontFamily:DISPLAY,fontSize:28,color:C.ink,lineHeight:1}}>{r.date.slice(8)}</div>
                         <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.4,textTransform:"uppercase"}}>
@@ -324,29 +379,65 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                           ? <div style={{fontFamily:DISPLAY,fontSize:score?24:20,color:res.fg,lineHeight:1}}>{score||r.result}</div>
                           : <span style={{fontSize:11.5,fontWeight:700,color:cd==="Today"?C.red:C.muted,
                               border:`1px solid ${cd==="Today"?C.red+"55":C.line2}`,padding:"5px 10px",
-                              borderRadius:20,whiteSpace:"nowrap"}}>{cd||"TBC"}</span>}
+                              borderRadius:20,whiteSpace:"nowrap"}}>{cd || (done ? "No score" : "TBC")}</span>}
                       </div>
                       {hasDetail && <span style={{color:C.faint,fontSize:16,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</span>}
+                     </div>
+
+                     {(done || film) && (
+                       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:11,alignItems:"center"}}>
+                         {m.goals>0 && <Chip icon="⚽" value={m.goals} strong color={C.red}
+                                             label={m.goals===1?"Goal":"Goals"}/>}
+                         {m.assists>0 && <Chip icon="🅰️" value={m.assists} color={RESULT.W.fg}
+                                               label={m.assists===1?"Assist":"Assists"}/>}
+                         {m.minutes>0 && <Chip icon="⏱" value={`${m.minutes}'`} label="Played" color={C.gold}/>}
+                         {m.sot>0 && <Chip icon="🎯" value={m.sot} label="On goal" color={C.blue}/>}
+                         {m.tackles>0 && <Chip icon="🛡" value={m.tackles} label="Tackles" color={C.teal}/>}
+                         {r.veoLink && <FilmLink href={r.veoLink} label="Veo" color={C.violet}/>}
+                         {r.takaLink && <FilmLink href={r.takaLink} label="Taka" color={C.blue}/>}
+                         {done && !hasStats(r) && (
+                           <span style={{color:C.faint,fontSize:11.5}}>No stats recorded yet</span>
+                         )}
+                       </div>
+                     )}
                     </div>
 
                     {open && hasDetail && (
                       <div style={{padding:"0 18px 18px",borderTop:`1px solid ${C.line}`,paddingTop:16}}>
-                        {isPlayed(r) && (
+                        {showStats && (
                           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(62px,1fr))",gap:8,
                                        marginBottom:16,background:C.bg,borderRadius:10,padding:"12px 10px"}}>
-                            {[{v:r.minutes+"'",l:"MIN",c:C.gold},{v:r.goals,l:"GOALS",c:C.red},
-                              {v:r.assists,l:"AST",c:RESULT.W.fg},{v:r.shots||0,l:"SHOTS",c:C.violet},
-                              {v:r.sot||0,l:"SOT",c:C.blue},{v:r.passes||0,l:"PASS",c:C.muted},
-                              {v:r.tackles||0,l:"TKL",c:C.muted},
-                              ...EVENT_TYPES.filter(t=>countsOf(r.events)[t.key]>0)
-                                  .map(t=>({v:countsOf(r.events)[t.key],l:t.short,c:C.teal})),
+                            {[{v:m.minutes+"'",l:"MIN",c:C.gold},{v:m.goals,l:"GOALS",c:C.red},
+                              {v:m.assists,l:"AST",c:RESULT.W.fg},{v:m.shots,l:"SHOTS",c:C.violet},
+                              {v:m.sot,l:"SOT",c:C.blue},{v:m.passes,l:"PASS",c:C.muted},
+                              {v:m.tackles,l:"TKL",c:C.muted},
+                              {v:m.corners,l:"COR",c:C.teal},{v:m.freeKicks,l:"FK",c:C.teal},
                               ...(hasValue(r.takaPos)?[{v:r.takaPos,l:"T+",c:RESULT.W.fg}]:[]),
-                              ...(hasValue(r.takaNeg)?[{v:r.takaNeg,l:"T−",c:RESULT.L.fg}]:[])].map((s,j)=>(
+                              ...(hasValue(r.takaNeg)?[{v:r.takaNeg,l:"T−",c:RESULT.L.fg}]:[])].map((st,j)=>(
                               <div key={j} style={{textAlign:"center"}}>
-                                <div style={{fontFamily:DISPLAY,fontSize:21,color:s.c}}>{s.v}</div>
-                                <div style={{color:C.faint,fontSize:9.5,fontWeight:700,letterSpacing:.5}}>{s.l}</div>
+                                <div style={{fontFamily:DISPLAY,fontSize:21,color:st.c}}>{st.v}</div>
+                                <div style={{color:C.faint,fontSize:9.5,fontWeight:700,letterSpacing:.5}}>{st.l}</div>
                               </div>
                             ))}
+                          </div>
+                        )}
+
+                        {r.events.length > 0 && (
+                          <div style={{marginBottom:14}}>
+                            <div style={{color:C.teal,fontSize:12,fontWeight:700,letterSpacing:1,marginBottom:6}}>
+                              ⏱ LOGGED DURING THE MATCH
+                            </div>
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                              {r.events.map(e => {
+                                const t = EVENT_TYPES.find(x => x.key === e.type);
+                                return (
+                                  <span key={e.id} style={{background:C.bg,border:`1px solid ${C.line}`,borderRadius:7,
+                                                           padding:"5px 9px",fontSize:12,color:C.ink2,whiteSpace:"nowrap"}}>
+                                    {t?.icon} {e.t ? `${e.t} · ` : ""}{t?.label.replace(/s$/,"")}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           </div>
                         )}
 
@@ -400,10 +491,6 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
                         )}
 
                         <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"center"}}>
-                          {r.takaLink && <a href={r.takaLink} target="_blank" rel="noopener noreferrer"
-                            style={{...BS,padding:"6px 14px",fontSize:12,color:C.blue,borderColor:C.blue+"44",textDecoration:"none"}}>🎥 Taka</a>}
-                          {r.veoLink && <a href={r.veoLink} target="_blank" rel="noopener noreferrer"
-                            style={{...BS,padding:"6px 14px",fontSize:12,color:C.violet,borderColor:C.violet+"44",textDecoration:"none"}}>🎥 Veo</a>}
                           <button onClick={ev=>{ev.stopPropagation();openMatch?.("matchday", r.id);}}
                             style={{...BS,padding:"6px 14px",fontSize:12,color:C.gold,borderColor:C.gold+"44"}}>⏱ Log match day</button>
                           <button onClick={ev=>{ev.stopPropagation();openMatch?.("reflect", r.id);}}

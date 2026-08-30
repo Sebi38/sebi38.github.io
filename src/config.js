@@ -4,6 +4,11 @@ export const PLAYER = {
   lastName: "HOWELL",
   number: "38",
   team: "ASA 2013 MLSNext",
+  // Where he actually plays, shown under his name on the home page.
+  positions: [
+    { code: "CB",  label: "Center Back" },
+    { code: "CAM", label: "Center Attacking Midfielder" },
+  ],
 };
 
 

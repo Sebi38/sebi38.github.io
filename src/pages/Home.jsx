@@ -4,7 +4,9 @@ import { C, CardS, GlassS, DISPLAY, BODY, PAGE, rise, RESULT } from '../ui/theme
 import StatTile from '../ui/StatTile.jsx';
 import FormGuide from '../ui/FormGuide.jsx';
 import FixtureCard from '../ui/FixtureCard.jsx';
-import { nextFixture, form, record, played, prettyDate, venueOf, countdownLabel } from '../lib/season.js';
+import { nextFixture, form, played, prettyDate, venueOf, countdownLabel } from '../lib/season.js';
+import { totals, averageRating } from '../lib/stats.js';
+import { findEntry } from '../lib/journal.js';
 import heroPhoto from '../assets/sebi-hero.jpg';
 import avatar from '../assets/sebi.jpg';
 
@@ -39,12 +41,23 @@ function Hero({ next }) {
           <span style={{display:"block",color:C.red}}>{PLAYER.lastName}</span>
         </h1>
 
-        <div style={{display:"flex",alignItems:"center",gap:14,marginTop:14,...rise(2)}}>
+        <div style={{display:"flex",alignItems:"center",gap:14,marginTop:14,flexWrap:"wrap",...rise(2)}}>
           <span style={{fontFamily:DISPLAY,fontSize:34,color:C.ink,background:"rgba(230,57,70,.16)",
                         border:`1px solid ${C.red}55`,borderRadius:12,padding:"2px 14px",lineHeight:1.25}}>
             #{PLAYER.number}
           </span>
-          <span style={{color:C.ink3,fontSize:14,fontWeight:600,letterSpacing:1}}>Centre Back</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            {PLAYER.positions.map(p => (
+              <span key={p.code} style={{color:C.ink3,fontSize:14,fontWeight:600,letterSpacing:1,
+                                         display:"inline-flex",alignItems:"baseline",gap:6,
+                                         whiteSpace:"nowrap"}}>
+                {p.label}
+                <span style={{color:C.blue,fontSize:11,fontWeight:800,letterSpacing:1.4,
+                              background:"rgba(74,124,204,.14)",border:`1px solid ${C.blue}44`,
+                              borderRadius:5,padding:"1px 6px"}}>{p.code}</span>
+              </span>
+            ))}
+          </div>
         </div>
 
         {next && (
@@ -70,11 +83,11 @@ function Hero({ next }) {
 export default function Home({ stats, journal, setPage }) {
   const next = nextFixture(stats);
   const recent = form(stats, 5);
-  const rec = record(stats);
-  const goals = stats.reduce((s,g)=>s+(g.goals||0),0);
-  const assists = stats.reduce((s,g)=>s+(g.assists||0),0);
-  const minutes = stats.reduce((s,g)=>s+(g.minutes||0),0);
-  const avg = journal.length ? (journal.reduce((s,j)=>s+(j.rating||0),0)/journal.length).toFixed(1) : "—";
+  // One source of truth for every number on this page — the same arithmetic the
+  // Matches tab uses, so the two can no longer disagree. It folds in the events
+  // tapped during a game and only counts matches that have actually happened.
+  const t = totals(stats);
+  const avg = averageRating(stats, r => findEntry(journal, r.id, r.date));
   const recentGames = played(stats).slice(0,3);
 
   return (
@@ -93,13 +106,15 @@ export default function Home({ stats, journal, setPage }) {
         }>CAREER</SectionTitle>
 
         <div className="tiles" style={{marginBottom:44}}>
-          <StatTile i={0} big value={rec.played} label="Played" accent={C.blue}/>
-          <StatTile i={1} big value={goals} label="Goals" accent={C.red}/>
-          <StatTile i={2} big value={assists} label="Assists" accent={RESULT.W.fg}/>
-          <StatTile i={3} big value={minutes.toLocaleString()} label="Minutes" accent={C.gold}/>
+          <StatTile i={0} big value={t.matches} label="Played" accent={C.blue}
+                    sub={t.results<t.matches?`${t.matches-t.results} without a result`:null}/>
+          <StatTile i={1} big value={t.goals} label="Goals" accent={C.red}
+                    sub={t.assists?`${t.goals+t.assists} goal contributions`:null}/>
+          <StatTile i={2} big value={t.assists} label="Assists" accent={RESULT.W.fg}/>
+          <StatTile i={3} big value={t.minutes.toLocaleString()} label="Minutes" accent={C.gold}/>
           <StatTile i={4} big value={avg} label="Avg rating" accent={C.violet}/>
-          <StatTile i={5} big value={`${rec.w}-${rec.d}-${rec.l}`} label="W-D-L" accent={C.teal}
-                    sub={rec.gf||rec.ga?`${rec.gf}:${rec.ga} goals`:null}/>
+          <StatTile i={5} big value={`${t.w}-${t.d}-${t.l}`} label="W-D-L" accent={C.teal}
+                    sub={t.gf||t.ga?`${t.gf}:${t.ga} goals`:null}/>
         </div>
 
         {/* ── Recent results ──────────────────────────────────────────── */}

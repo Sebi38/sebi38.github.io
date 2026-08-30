@@ -313,6 +313,10 @@ export default function MatchDay({ stats, journal, focusId }) {
                 </button>
               ))}
             </div>
+            <div style={{color: C.faint, fontSize: 11.5, textAlign: "center", marginTop: 10, lineHeight: 1.5}}>
+              Each tap stamps the time. Shots on goal recorded here count as SOT
+              in the season stats — there is no need to type them in again later.
+            </div>
             {events.length > 0 && (
               <div style={{marginTop: 12, display: "grid", gap: 5}}>
                 {[...events].reverse().map(e => {
@@ -388,6 +392,10 @@ export default function MatchDay({ stats, journal, focusId }) {
             Passes, tackles and Taka counts aren't here on purpose — they come from
             the match analytics afterwards, not from watching. Add those on the Matches
             tab later.
+          </p>
+          <p style={{color: C.faint, fontSize: 12, textAlign: "center", marginTop: 8, lineHeight: 1.6}}>
+            You don't have to enter a score for these numbers to count — a match with
+            minutes or goals logged shows its statistics either way.
           </p>
         </>
       )}
