@@ -131,3 +131,83 @@ the site down, because the old build cannot authenticate.
   rules and the signed-in user.
 - Everyone shares one login, so treat the password the way you would treat a
   house key.
+
+---
+
+## The academy search
+
+The Academies tab scores MLS academies for a player: ten weighted dimensions,
+confidence priced in, fit and odds on separate axes, and a call sheet that
+ranks the open questions by what an answer would settle.
+
+**The data is private and never enters the bundle.** This repo is public and
+the site is static files on GitHub Pages — the sign-in screen decides what
+React renders, not what is served, so anything imported into `src/` is readable
+by anyone who fetches the JavaScript. The only real wall is Firebase. So:
+
+- **Code lives here.** The engine (`src/lib/academies.js`), the validator, the
+  generic model (`src/data/academies/meta.js` — dimensions, confidence,
+  stages, tiers) and the reusable question bank. None of it is about anyone.
+- **Data lives in `private/academies/`**, which is gitignored: the screening
+  rows for every club, the research records for the shortlist, the player and
+  the family's own decisions. Edited in a text editor.
+- **The site reads from Firebase** at `seb38/academies`, behind the same rules
+  as everything else, after sign-in. Pipeline edits made in the tab — stage
+  changes, call notes — save back there and survive a re-import.
+
+```
+npm run academies              the brief, printed from private/academies/
+npm run academies -- --export  writes private/academies/bundle.json
+npm run academies -- --md      also writes private/academies/academy-search.md
+npm run academies -- --json    the scored matrix, for taking back into a chat
+```
+
+Every run validates the data first and exits non-zero if it is broken. To get
+the data into the site: `--export`, then open the Academies tab and pick the
+bundle file. Re-importing replaces the research and keeps the pipeline state
+the tab has written since.
+
+### How a club is scored
+
+Two tiers. Every club has a screening row — travel tier, public rank, and four
+scores with notes. The shortlist also has a research record: all ten
+dimensions, two gates, a cost model, a pipeline, open questions, and the
+reasoning behind every number. Both are scored on the same dimensions;
+research scores where they exist, screening scores mapped onto the dimensions
+they inform where they do not, and everything else at the neutral prior — so a
+screening club is never quietly credited with a coaching staff nobody has
+looked at.
+
+- **Confidence is arithmetic, not a label.** A dimension's score is blended
+  toward the prior in proportion to how little is known: `score × c + 3 × (1 −
+  c)`. An unresearched dimension scores 3, not whatever somebody guessed, so a
+  club cannot climb the table by being unexamined and a confirmed 4 beats a
+  reported 5. The gap between face value and the adjusted score is shown as
+  how much of a club's standing is currently faith.
+- **Fit and odds are separate axes.** "How good would this be" and "will it
+  happen" are different questions, and averaging them hides the trade-off. The
+  default sort is expected value — fit × odds.
+- **Cost confidence is computed**, from how much of the four-line cost model
+  is pinned down. A club can be "fully funded" and uncosted at the same time.
+- **Weights are the family's priorities**, set once in `meta.js` and
+  adjustable live in the tab, where they save to that browser only.
+
+The tab also lists screening clubs that outscore the weakest club being
+actively pursued — the check on the choice of shortlist.
+
+### The call sheet
+
+Every open question declares which dimensions it would resolve. A question that
+*clarifies* is worth the weighted uncertainty it removes; one that *decides*
+whether a club stays on the list is worth the club's whole candidacy, counted
+once per club. Both are divided by effort. Clubs marked `posture: "gated"` get
+only their own questions until the gate clears.
+
+### Editing it
+
+Edit the private files, never the generated brief. Logging a call means moving
+`pipeline.stage` (in the tab or the file), raising the confidence on whatever
+the answer settled, and deleting the question it answered. Promoting a club
+means adding a record to `research.js` under its `screening.js` id; where a
+research score and the screening score for the same dimension disagree by a
+point or more, the tab and the brief both say so.

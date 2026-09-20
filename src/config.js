@@ -38,6 +38,11 @@ export const SK = {
   coaching: "seb38-coaching",
   journal: "seb38-journal",
   stats: "seb38-stats",
+  // The academy dataset, cached whole. Lives at seb38/academies, not under
+  // seb38/data: it is one document, not a row collection, and it never goes
+  // through the row-merge path.
+  academies: "seb38-academies",
+  academyWeights: "seb38-academy-weights",
 };
 
 // localStorage key -> Firebase node name

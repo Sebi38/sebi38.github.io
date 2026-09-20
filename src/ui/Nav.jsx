@@ -7,6 +7,7 @@ export const TABS = [
   {id:"reflect",    label:"Sebi's Review", icon:"🧠"},
   {id:"highlights", label:"Highlights",    icon:"⭐"},
   {id:"training",   label:"Training",      icon:"📚"},
+  {id:"academies",  label:"Academies",     icon:"🎓"},
 ];
 
 export default function Nav({ active, setActive }) {

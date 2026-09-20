@@ -13,6 +13,7 @@ import MatchDay from './pages/MatchDay.jsx';
 import Reflect from './pages/Reflect.jsx';
 import Highlights from './pages/Highlights.jsx';
 import Training from './pages/Training.jsx';
+import Academies from './pages/Academies.jsx';
 
 // Tabs are addressable as #matchday, #schedule, … so the back button works,
 // a refresh keeps your place, and a home-screen icon can point at one.
@@ -28,6 +29,7 @@ const PAGES = {
   reflect: Reflect,
   highlights: Highlights,
   training: Training,
+  academies: Academies,
 };
 
 // Shown when the database could not be reached. The app keeps working from
