@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { marked } from 'marked';
 import { SK } from '../config.js';
 import { C, CardS, GlassS, DISPLAY, BODY, PAGE, H2, IS, LS, BP, BS, RESULT, rise } from '../ui/theme.js';
 import SectionTitle from '../ui/SectionTitle.jsx';
 import Modal from '../ui/Modal.jsx';
 import Pill from '../ui/Pill.jsx';
+import ViewToggle from '../ui/ViewToggle.jsx';
 import {
   matrix, promotions, globalCallSheet, callSheet, calendar, health, entry, gate, annualCost, todayISO,
   DIMENSIONS, CONFIDENCE, TIERS, STAGES, DEFAULT_WEIGHTS,
 } from '../lib/academies.js';
-import { GATES, TRAVEL_TIERS } from '../data/academies/meta.js';
+import { GATES, TRAVEL_TIERS, RANK_SOURCE } from '../data/academies/meta.js';
 import { loadAcademies, cachedAcademies, importBundle, savePipeline } from '../lib/academyStore.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,6 +75,69 @@ function Note({ children, style }) {
   return <div style={{color:C.ink3,fontSize:12.5,lineHeight:1.5,...style}}>{children}</div>;
 }
 
+// A club's full research report, rendered from markdown.
+//
+// innerHTML is acceptable here and nowhere else on the site: the text is the
+// family's own file, bundled by the export script and read back from Firebase
+// behind sign-in. Nothing a stranger wrote can reach this component.
+marked.setOptions({ gfm: true, breaks: false });
+function Report({ text }) {
+  const html = useMemo(() => marked.parse(text || ""), [text]);
+  return <div className="report" dangerouslySetInnerHTML={{ __html: html }}/>;
+}
+
+// What the numbers mean. Tooltips do not exist on a phone, so this is a panel.
+const TERMS = [
+  { t:"● Deep dive · ○ Screening",
+    d:"Two depths of research. A deep-dive club has a full record — ten scored dimensions, a cost model, open questions, a pipeline. A screening club has travel, a public rank and four screening scores, and is unknown on everything else." },
+  { t:"Fit",
+    d:"The weighted average of the ten dimensions, out of 5, with confidence priced in. A dimension nobody has researched scores 3 — the neutral prior — not whatever was guessed, so a club cannot climb the table by being unexamined. A confirmed 4 beats a reported 5." },
+  { t:"Odds",
+    d:"The realistic chance of a place, out of 5. Being seen and being taken are different: a club can be long odds because it never looks outside its own territory, or because it looks everywhere and takes almost no one. At screening depth this is the recruiting-reach score, with any drivable club treated as fully open." },
+  { t:"EV",
+    d:"Expected value: fit × odds, on the fit scale. The default sort. Multiplied rather than averaged on purpose — a club he cannot get into is not a good option with a drawback, it is not an option." },
+  { t:"Evidenced",
+    d:"How much of the weighted score rests on something somebody actually checked. Below 60% a club is too thin to rank honestly, and its fit is mostly the prior. \"On faith\" is the gap between what the page claims and what is evidenced." },
+  { t:"Rank",
+    d:`${RANK_SOURCE.name}, ${RANK_SOURCE.date}: ${RANK_SOURCE.ranked} US clubs ranked. ${RANK_SOURCE.note} For a screening club, the soccer-environment score is read from this rank.` },
+  { t:"Travel",
+    d:Object.entries(TRAVEL_TIERS).map(([n, t]) => `T${n} ${t.label.toLowerCase()}`).join(" · ") + ". What the distance costs in a normal week, not in miles." },
+  { t:"Confidence",
+    d:Object.entries(CONFIDENCE).filter(([k]) => k !== "derived").map(([, k]) => `${k.mark} ${k.label}: ${k.meaning}`).join(" ") + " ƒ Derived is cost only — computed from how much of the cost model is pinned down." },
+  { t:"★ Decisive · ● Blocking · ○ Clarifying",
+    d:"Questions. A clarifying question is worth the uncertainty it removes; a blocking one changes whether the club stays on the list; the decisive one is the cheapest blocking question and is priced at the club's whole candidacy." },
+  { t:"Gated",
+    d:"One question decides whether researching this club is worth doing at all. Until it is answered, the club gets only its own questions, not the full due-diligence list." },
+  { t:"Carried by odds / fit",
+    d:"In the shortlist check: what is holding a screening club up. \"Odds\" means national reach or the drivable rule, not anything known about the club. \"Fit\" means the screening scores themselves are strong." },
+];
+
+function Glossary() {
+  return (
+    <div style={{...CardS,padding:"16px 18px",display:"grid",gap:12}}>
+      {TERMS.map(x => (
+        <div key={x.t}>
+          <div style={{color:C.ink,fontWeight:700,fontSize:13.5}}>{x.t}</div>
+          <Note style={{marginTop:2}}>{x.d}</Note>
+        </div>
+      ))}
+      <div style={{color:C.muted,fontSize:12.5,fontWeight:700,marginTop:4}}>The dimensions</div>
+      {DIMENSIONS.map(d => (
+        <div key={d.id} style={{display:"flex",gap:10,alignItems:"baseline"}}>
+          <div style={{color:C.ink2,fontWeight:600,fontSize:13,minWidth:200}}>{d.label} <span style={{color:C.faint,fontWeight:400,fontSize:11}}>×{d.weight}</span></div>
+          <Note>{d.asks}</Note>
+        </div>
+      ))}
+      {GATES.map(g => (
+        <div key={g.id} style={{display:"flex",gap:10,alignItems:"baseline"}}>
+          <div style={{color:C.ink2,fontWeight:600,fontSize:13,minWidth:200}}>{g.label} <span style={{color:C.faint,fontWeight:400,fontSize:11}}>gate</span></div>
+          <Note>{g.asks}</Note>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Sections ─────────────────────────────────────────────────────────────────
 
 // The family's priorities. These save to this browser only — they are a way of
@@ -132,7 +197,7 @@ const COLS = [
   { k:"adjusted",      l:"Fit",      align:"right", tip:"Weighted score with confidence priced in" },
   { k:"odds",          l:"Odds",     align:"right", tip:"Realistic chance of a place" },
   { k:"expectedValue", l:"EV",       align:"right", tip:"Fit × odds — the default sort" },
-  { k:"coverage",      l:"Ev'd",     align:"right", tip:"Share of the weighted decision that is evidenced" },
+  { k:"coverage",      l:"Evidenced",align:"right", tip:"Share of the weighted decision that is evidenced" },
   { k:"rank",          l:"Rank",     align:"right", tip:"US Soccer Collective, Aug 2026" },
   { k:"travel",        l:"Travel",   align:"left"  },
 ];
@@ -333,6 +398,7 @@ function Pipeline({ club, onSave }) {
 
 function ClubModal({ row, onClose, onSavePipeline }) {
   const k = row.computed, deep = row.tier === "deep-dive";
+  const [view, setView] = useState("scores");
   const cost = annualCost(row);
   const calls = deep && !row.blocked ? callSheet(row, { limit: 6 }) : [];
   const sc = row.screening || {};
@@ -351,12 +417,19 @@ function ClubModal({ row, onClose, onSavePipeline }) {
       </div>
       {row.blocked && <div style={{...CardS,padding:"10px 14px",color:C.red,fontSize:13,marginBottom:12,borderColor:C.red+"55"}}>{row.blocked}</div>}
 
+      {row.report && (
+        <div style={{marginBottom:16}}>
+          <ViewToggle view={view} setView={setView} options={[{v:"scores",l:"Scores"},{v:"report",l:"📄 Full report"}]}/>
+        </div>
+      )}
+
+      {view === "report" && row.report ? <Report text={row.report}/> : (<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-        <Tile value={k.adjusted.toFixed(2)} label="Fit" accent={C.blue}/>
-        <Tile value={k.odds.toFixed(1)} label="Odds" accent={C.gold}/>
-        <Tile value={row.blocked?"0":k.expectedValue.toFixed(2)} label="EV" accent={C.red}/>
+        <Tile value={k.adjusted.toFixed(2)} label="Fit" accent={C.blue} sub="of 5, confidence priced in"/>
+        <Tile value={k.odds.toFixed(1)} label="Odds" accent={C.gold} sub="chance of a place"/>
+        <Tile value={row.blocked?"0":k.expectedValue.toFixed(2)} label="EV" accent={C.red} sub="fit × odds"/>
         <Tile value={`${k.coverage}%`} label="Evidenced" accent={k.coverage<60?C.gold:RESULT.W.fg}
-              sub={k.faith>=0.1?`${k.faith.toFixed(2)} on faith`:null}/>
+              sub={k.faith>=0.1?`${k.faith.toFixed(2)} on faith`:"of the score is checked"}/>
       </div>
 
       {(row.assessment || sc.summary) && (
@@ -448,6 +521,10 @@ function ClubModal({ row, onClose, onSavePipeline }) {
       {!deep && !row.blocked && (
         <Note style={{marginTop:18,color:C.faint}}>Screening only. Promote it by adding a research record in private/academies/research.js and re-importing.</Note>
       )}
+      {deep && !row.report && (
+        <Note style={{marginTop:12,color:C.faint}}>No full report bundled yet — write one at private/academies/reports/{row.id}.md and re-export.</Note>
+      )}
+      </>)}
     </Modal>
   );
 }
@@ -470,6 +547,7 @@ export default function Academies() {
   const [filter, setFilter] = useState("all");
   const [hideBlocked, setHideBlocked] = useState(false);
   const [openId, setOpenId] = useState(null);
+  const [showTerms, setShowTerms] = useState(false);
   const [msg, setMsg] = useState(null);
   const fileRef = useRef();
 
@@ -583,7 +661,15 @@ export default function Academies() {
           <div style={{marginBottom:28}}><Weights weights={weights} setWeights={setWeights}/></div>
 
           {/* ── The matrix ────────────────────────────────────────────── */}
-          <SectionTitle right={<span style={{color:C.muted,fontSize:12}}>{rows.length} of {scored.length}</span>}>THE MATRIX</SectionTitle>
+          <SectionTitle right={
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <span style={{color:C.muted,fontSize:12}}>{rows.length} of {scored.length}</span>
+              <button onClick={()=>setShowTerms(!showTerms)} style={{...BS,padding:"7px 14px",fontSize:12,color:showTerms?C.ink:C.blue,borderColor:C.blue+"44"}}>
+                {showTerms ? "Hide definitions" : "What do these mean?"}
+              </button>
+            </div>
+          }>THE MATRIX</SectionTitle>
+          {showTerms && <div style={{marginBottom:14}}><Glossary/></div>}
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
             {FILTERS.map(f => <Pill key={f.id} label={f.l} active={filter===f.id} onClick={()=>setFilter(f.id)}/>)}
             <Pill label="Hide blocked" active={hideBlocked} onClick={()=>setHideBlocked(!hideBlocked)}/>
@@ -591,8 +677,10 @@ export default function Academies() {
           <MatrixTable rows={rows} sortBy={sortBy} dir={dir} onSort={onSort} onOpen={setOpenId}/>
           <Note style={{marginTop:8,marginBottom:36}}>
             <span style={{color:C.red,fontWeight:800}}>●</span> deep dive · <span style={{color:C.faint,fontWeight:800}}>○</span> screening.
-            Fit is the weighted score with confidence priced in; odds is the chance of a place; EV is fit × odds.
-            A screening club sits near the prior on fit, so its EV is mostly odds. Tap a row for the reasoning.
+            <b style={{color:C.ink2}}> Fit</b> is the weighted score out of 5 with confidence priced in;
+            <b style={{color:C.ink2}}> odds</b> is the chance of a place; <b style={{color:C.ink2}}>EV</b> is fit × odds, the sort;
+            <b style={{color:C.ink2}}> evidenced</b> is how much of the score somebody checked.
+            A screening club sits near the prior on fit, so its EV is mostly odds. Tap a row for the reasoning, or a column to sort.
           </Note>
 
           {/* ── Promotions ────────────────────────────────────────────── */}
