@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "academies": "node scripts/academies.mjs",
+    "academies:check": "node scripts/academies.mjs --json > /dev/null && echo \"academy data ok\""
   },
   "dependencies": {
     "firebase": "^10.14.1",
