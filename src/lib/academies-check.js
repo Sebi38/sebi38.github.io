@@ -116,6 +116,9 @@ export function check(dataset) {
     if (posture === "gated" && !(club.openQuestions || []).some(q => q.priority === "blocking"))
       E(at, "gated but has no blocking question to clear the gate");
 
+    if (club.report != null && typeof club.report !== "string") E(at, "report must be markdown text");
+    if (!club.report) W(at, `no full report yet (private/academies/reports/${club.id}.md)`);
+
     // A club nobody can contact cannot be pursued, however good it looks.
     const contact = club.profile?.contact || {};
     if (!contact.interestForm && !contact.email && stage === "not-contacted")

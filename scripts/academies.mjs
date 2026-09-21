@@ -5,6 +5,10 @@
 //   npm run academies              the full brief
 //   npm run academies -- --md      also writes private/academies/academy-search.md
 //   npm run academies -- --export  writes private/academies/bundle.json for the site
+//
+// A club's full research report, if one has been written, lives at
+// private/academies/reports/<club-id>.md and is bundled onto the club as
+// `report` so the tab can show it next to the scores it justifies.
 //   npm run academies -- --json    the scored matrix, for taking back into a chat
 //   npm run academies -- --warn    include schema warnings
 //
@@ -14,7 +18,7 @@
 // writes is what the Academies tab imports.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { writeFileSync, existsSync } from 'node:fs';
+import { writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { mergeTiers, matrix, health, globalCallSheet, callSheet, calendar, promotions, DIMENSIONS, TIERS }
   from '../src/lib/academies.js';
 import { TRAVEL_TIERS, RANK_SOURCE } from '../src/data/academies/meta.js';
@@ -36,13 +40,18 @@ const [{ SCREENING }, { RESEARCH }, { PLAYER_SEARCH, BLOCKERS, KEY_DATES }] = aw
   import(new URL('research.js', PRIVATE)),
   import(new URL('player.js', PRIVATE)),
 ]);
+const clubsMerged = mergeTiers(SCREENING, RESEARCH);
+for (const club of clubsMerged) {
+  const f = new URL(`reports/${club.id}.md`, PRIVATE);
+  if (existsSync(f)) club.report = readFileSync(f, 'utf8');
+}
 const dataset = {
   version: 1,
   exported: TODAY,
   player: PLAYER_SEARCH,
   blockers: BLOCKERS,
   keyDates: KEY_DATES,
-  clubs: mergeTiers(SCREENING, RESEARCH),
+  clubs: clubsMerged,
 };
 
 // ── Validate before anything else ────────────────────────────────────────────
@@ -59,7 +68,8 @@ if (!v.ok) {
 if (has('--export')) {
   const out = new URL('bundle.json', PRIVATE);
   writeFileSync(out, JSON.stringify(dataset, null, 2) + "\n");
-  console.log(`→ wrote private/academies/bundle.json (${dataset.clubs.length} clubs). Import it from the Academies tab.`);
+  const withReport = dataset.clubs.filter(c => c.report).length;
+  console.log(`→ wrote private/academies/bundle.json (${dataset.clubs.length} clubs, ${withReport} with a full report). Import it from the Academies tab.`);
   if (!has('--md') && !has('--json')) process.exit(0);
 }
 
@@ -169,6 +179,7 @@ for (const r of deep) {
   if (k.divergences.length) say(`  ${c(P.dim, "screening vs research:")} ${k.divergences.map(d => `${dimLabel(d.dim)} ${d.screening}→${d.research}`).join(" · ")}`);
   say(`  ${c(P.dim, "cost/yr:")} ${costBand(k.cost)}`);
   if (r.research?.posture === "gated") say(`  ${c(P.yel, "gated:")} ${r.research.gatedOn}`);
+  if (!r.report) say(c(P.dim, `  no report yet — private/academies/reports/${r.id}.md`));
   const top = callSheet(r, { limit: 1 });
   if (top.length) say(`  ${c(P.dim, "ask first:")} ${top[0].q}`);
   say("");
