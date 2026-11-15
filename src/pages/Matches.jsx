@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { SK, POS } from '../config.js';
 import { SEASONS, filterBySeason } from '../data/seasons.js';
 import { surfaceForVenue } from '../data/venues.js';
@@ -7,6 +7,7 @@ import { normalizeStatForm, hasValue } from '../lib/numbers.js';
 import { momentsOf, momentId, label as momentLabel } from '../lib/moments.js';
 import { questionsOf, openCount } from '../lib/questions.js';
 import { findEntry } from '../lib/journal.js';
+import { parseFilmBundle, planFilmImport, applyFilmImport } from '../lib/film.js';
 import { EVENT_TYPES, eventsOf } from '../lib/events.js';
 import { matchStats, hasStats, hasHappened, totals } from '../lib/stats.js';
 import { nextFixture, record, form, monthLabel, countdownLabel,
@@ -70,6 +71,8 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
   const [expanded, setExpanded] = useState(null);
   const [editing, setEditing] = useState(null);
   const [formState, setForm] = useState(EMPTY);
+  const [filmImport, setFilmImport] = useState(null);   // null | { error } | { plan, rejected }
+  const filmRef = useRef(null);
 
   const saveStats = u => { setStats(u); sv(SK.stats, u); };
   const saveJournal = u => { setJournal(u); sv(SK.journal, u); };
@@ -181,6 +184,27 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
     if (e) saveJournal(journal.filter(x => x.id !== e.id));
   };
 
+  // ── film links, imported from a file ─────────────────────────────────────
+  // The links are personal, so they come in as a file picked here and go
+  // straight to the database — never into the public code. See lib/film.js.
+  const onFilmFile = async ev => {
+    const f = ev.target.files?.[0];
+    ev.target.value = "";                   // so the same file can be re-picked
+    if (!f) return;
+    let parsed;
+    try { parsed = parseFilmBundle(await f.text()); }
+    catch { parsed = { ok: false, error: "Couldn't read that file." }; }
+    setFilmImport(parsed.ok
+      ? { plan: planFilmImport(stats, journal, parsed.links), rejected: parsed.rejected }
+      : { error: parsed.error });
+  };
+
+  const saveFilm = () => {
+    if (!filmImport?.plan?.fills.length) return;
+    saveJournal(applyFilmImport(journal, filmImport.plan));
+    setFilmImport(null);
+  };
+
   // ── ticking a moment off once it's been seen on film ─────────────────────
   const toggleMoment = (row, mId) => {
     const e = row._entry;
@@ -286,7 +310,10 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
           ))}
         </div>
         <SearchBar value={search} onChange={setSearch} placeholder="Search opponent, venue, position..."/>
-        <button onClick={()=>{setForm(EMPTY);setEditing("new");}} style={{...BP,marginLeft:"auto"}}>+ Add Match</button>
+        <input ref={filmRef} type="file" accept=".json,application/json" onChange={onFilmFile} style={{display:"none"}}/>
+        <button onClick={()=>filmRef.current?.click()}
+                style={{...BS,marginLeft:"auto",padding:"10px 16px",fontSize:13,color:C.violet,borderColor:C.violet+"44"}}>🎥 Import film</button>
+        <button onClick={()=>{setForm(EMPTY);setEditing("new");}} style={BP}>+ Add Match</button>
       </div>
 
       {mode === "questions" ? (
@@ -513,6 +540,59 @@ export default function Matches({ stats: statsProp, journal: journalProp, openMa
             </div>
           </div>
         ))}
+
+      {filmImport && (
+        <Modal title="IMPORT FILM LINKS" onClose={()=>setFilmImport(null)} wide>
+          {filmImport.error ? (
+            <div style={{color:RESULT.L.fg,fontSize:14}}>{filmImport.error}</div>
+          ) : (() => {
+            const { fills, unchanged, unmatched } = filmImport.plan;
+            const line = (r, extra) => (
+              <div key={r.date+r.opponent} style={{color:C.ink2,fontSize:13,lineHeight:1.5}}>
+                {prettyDate(r.date)} · {r.opponent || "?"}<span style={{color:C.muted}}> · {extra}</span>
+              </div>
+            );
+            return (
+              <div style={{display:"grid",gap:16}}>
+                <p style={{color:C.ink3,fontSize:13.5,lineHeight:1.6,margin:0}}>
+                  Only empty links are filled. A link already on a match is kept as it is.
+                </p>
+                <div style={{...CardS,padding:"14px 16px"}}>
+                  <div style={{color:RESULT.W.fg,fontSize:11.5,fontWeight:800,letterSpacing:1.4,marginBottom:8}}>
+                    ✓ {fills.length} {fills.length===1?"MATCH GETS":"MATCHES GET"} FILM
+                  </div>
+                  {fills.length ? fills.map(r => line(r, Object.keys(r.set).map(k => k==="veoLink"?"Veo":"Taka").join(" + ")))
+                                : <div style={{color:C.muted,fontSize:13}}>Nothing new in this file.</div>}
+                </div>
+                {unchanged.length > 0 && (
+                  <div style={{...CardS,padding:"14px 16px"}}>
+                    <div style={{color:C.muted,fontSize:11.5,fontWeight:800,letterSpacing:1.4,marginBottom:8}}>
+                      ALREADY LINKED · {unchanged.length}
+                    </div>
+                    {unchanged.map(r => line(r, `${r.kept.join(" + ")} kept`))}
+                  </div>
+                )}
+                {(unmatched.length > 0 || filmImport.rejected?.length > 0) && (
+                  <div style={{...CardS,padding:"14px 16px"}}>
+                    <div style={{color:C.gold,fontSize:11.5,fontWeight:800,letterSpacing:1.4,marginBottom:8}}>
+                      NOT IMPORTED · {unmatched.length + (filmImport.rejected?.length||0)}
+                    </div>
+                    {unmatched.map(r => line(r, r.reason))}
+                    {(filmImport.rejected||[]).map((r,i) => (
+                      <div key={"x"+i} style={{color:C.ink2,fontSize:13}}>{r.date || "undated"}<span style={{color:C.muted}}> · {r.reason}</span></div>
+                    ))}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:12}}>
+                  <button onClick={saveFilm} disabled={!fills.length}
+                          style={{...BP,opacity:fills.length?1:.45}}>Add film to {fills.length} {fills.length===1?"match":"matches"}</button>
+                  <button onClick={()=>setFilmImport(null)} style={BS}>Cancel</button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
 
       {editing && (
         <Modal title={editing==="new"?"ADD MATCH":"EDIT MATCH"} onClose={()=>setEditing(null)} wide>
