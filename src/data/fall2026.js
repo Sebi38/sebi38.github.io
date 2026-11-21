@@ -46,3 +46,30 @@ export const FALL26_JOURNAL = [
   {id:"faj26-15",date:"2026-11-08",opponent:"Sporting Athletic 2013 HG",location:"Chase Fields · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-15",fieldName:"Chase Fields",address:"",kickoff:"12:00 PM",tag:""},
   {id:"faj26-16",date:"2026-11-14",opponent:"Coppermine 2013 HG",location:"St Paul's School · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-16",fieldName:"St Paul's School",address:"",kickoff:"12:00 PM",tag:""},
 ];
+
+// Thanksgiving-weekend tournament, 21–22 Nov 2026. Added after the batches
+// above had already been seeded, so these go in under their own seed key
+// ("fall26-nov") — appending to FALL26_STATS would never reach the database.
+// Source: TeamSnap game reminders. The Sunday 3:00 PM slot is TeamSnap's
+// placeholder for a final the team may not reach; delete it if they don't.
+const OBGC = { fieldName: "OBGC Park", address: "4501 Olney-Laytonsville Road, Olney, MD" };
+const PLEX = { fieldName: "Maryland SoccerPlex", address: "" };
+const nov = [
+  ["17", "2026-11-21", "PWSI 12/13 RL",            OBGC, "2:45 PM"],
+  ["18", "2026-11-21", "NVA 2013 HG",              PLEX, "6:15 PM"],
+  ["19", "2026-11-22", "Potomac ECNL 12/13",       OBGC, "12:00 PM"],
+  ["20", "2026-11-22", "Tournament final (if we advance)", OBGC, "3:00 PM"],
+];
+const novNotes = (v, k) => `${v.fieldName}${v.address ? ` (${v.address})` : ""} · ${k}`;
+
+export const FALL26_NOV_STATS = nov.map(([n, date, opponent, v, kickoff]) => ({
+  id: `fa26-${n}`, date, opponent, position: "CB", minutes: 0, goals: 0, assists: 0, shots: 0,
+  sot: 0, passes: 0, tackles: 0, result: "—", notes: novNotes(v, kickoff),
+  fieldName: v.fieldName, address: v.address, kickoff, tag: "",
+}));
+
+export const FALL26_NOV_JOURNAL = nov.map(([n, date, opponent, v, kickoff]) => ({
+  id: `faj26-${n}`, date, opponent, location: novNotes(v, kickoff), surface: "grass",
+  position: "CB", wentWell: "", toImprove: "", rating: 5, freeform: "", statId: `fa26-${n}`,
+  fieldName: v.fieldName, address: v.address, kickoff, tag: "",
+}));

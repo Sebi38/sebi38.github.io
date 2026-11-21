@@ -1,6 +1,6 @@
 import { FALL25_STATS } from './fall2025.js';
 import { SPRING26_STATS, SPRING26_JOURNAL } from './spring2026.js';
-import { FALL26_STATS, FALL26_JOURNAL } from './fall2026.js';
+import { FALL26_STATS, FALL26_JOURNAL, FALL26_NOV_STATS, FALL26_NOV_JOURNAL } from './fall2026.js';
 import { SPRING27_STATS, SPRING27_JOURNAL } from './spring2027.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +28,8 @@ export const SEED_BATCHES = [
   { key: "fall26-j",   node: "journal", rows: FALL26_JOURNAL },
   { key: "spring27",   node: "stats",   rows: SPRING27_STATS },
   { key: "spring27-j", node: "journal", rows: SPRING27_JOURNAL },
+  { key: "fall26-nov",   node: "stats",   rows: FALL26_NOV_STATS },
+  { key: "fall26-nov-j", node: "journal", rows: FALL26_NOV_JOURNAL },
 ];
 
 // Display seasons, oldest first. `prefixes` lists the row-id prefixes that

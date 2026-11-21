@@ -17,7 +17,11 @@ const dataRef = node => db.ref(`${ROOT}/data/${node}`);
 async function seedOnce(seedKey, node, rows, alreadyRun) {
   if (alreadyRun[seedKey] || !rows?.length) return;
   const existing = fbSnapToArray(await readOnce(dataRef(node)));
-  await dataRef(node).set(arrayToFbObj([...rows, ...existing]));
+  // Skip anything already there — by id, or the same fixture added by hand —
+  // so a batch added mid-season never duplicates a game someone typed in.
+  const have = new Set(existing.flatMap(r => [r.id, `${r.date}|${(r.opponent || "").toLowerCase()}`]));
+  const fresh = rows.filter(r => !have.has(r.id) && !have.has(`${r.date}|${(r.opponent || "").toLowerCase()}`));
+  await dataRef(node).set(arrayToFbObj([...fresh, ...existing]));
   await seedRef(seedKey).set(true);
 }
 

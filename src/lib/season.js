@@ -104,21 +104,37 @@ export function record(stats) {
 // Match Day and Sebi's Review both offer the whole fixture list, newest first,
 // so today's game is always reachable. They differ only in what they open on.
 
+// "2:45 PM" → minutes after midnight, for ordering games on the same day.
+// Unknown kickoffs sort last.
+export function kickoffMinutes(row = {}) {
+  const m = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(venueOf(row).kickoff || "");
+  if (!m) return 24 * 60;
+  return (Number(m[1]) % 12 + (/pm/i.test(m[3]) ? 12 : 0)) * 60 + Number(m[2]);
+}
+
+// Newest first; two games on one day show the later kickoff first.
+const newestFirst = (a, b) => b.date.localeCompare(a.date) || kickoffMinutes(b) - kickoffMinutes(a);
+
 export const fixtureChoices = (stats, limit = 60) =>
-  [...stats].sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+  [...stats].sort(newestFirst).slice(0, limit);
 
 // Label for the dropdown: "● TODAY — 2026-08-23 · FVU"
 export const fixtureLabel = (g, from = todayISO()) =>
   `${g.date === from ? "● TODAY — " : ""}${g.date} · ${g.opponent}`;
 
-const onDate = (stats, d) => stats.find(g => g.date === d) || null;
+// Today's game. On a tournament day with several, the first one not yet
+// logged (by kickoff), else the last one played.
+function onDate(stats, d) {
+  const games = stats.filter(g => g.date === d).sort((a, b) => kickoffMinutes(a) - kickoffMinutes(b));
+  return games.find(g => !isPlayed(g)) || games[games.length - 1] || null;
+}
 
 // Logging during a game: today's fixture, else a past one still unlogged,
 // else whatever is next.
 export function defaultMatchDayFixture(stats, from = todayISO()) {
   return onDate(stats, from)
     || stats.filter(g => g.date < from && !isPlayed(g))
-            .sort((a, b) => b.date.localeCompare(a.date))[0]
+            .sort(newestFirst)[0]
     || upcoming(stats, from)[0]
     || null;
 }
@@ -127,7 +143,7 @@ export function defaultMatchDayFixture(stats, from = todayISO()) {
 // actually happened — a future game has nothing to look back on yet.
 export function defaultReviewFixture(stats, from = todayISO()) {
   return onDate(stats, from)
-    || [...stats].filter(g => g.date < from).sort((a, b) => b.date.localeCompare(a.date))[0]
+    || [...stats].filter(g => g.date < from).sort(newestFirst)[0]
     || upcoming(stats, from)[0]
     || null;
 }
