@@ -155,6 +155,29 @@ async function consolidateCoaching(alreadyRun) {
 // from Gmail were seeded here once (flags: gmail-resources-1, gika-recaps-1,
 // veo-links-1). That data lives in the database behind authentication and is
 // deliberately not kept in this public repository — see private/README.md.
+// TeamSnap moved the Coppermine away game from Sat 14 Nov (St Paul's, noon)
+// to Sun 15 Nov, 5:00 PM at Coppermine's Norris Field. The row had already
+// been seeded with the old details. Only moves the date, venue and kickoff,
+// and only while they still hold the old values — anything logged against the
+// game (score, minutes, moments, review) is kept.
+async function moveCoppermineNov(alreadyRun) {
+  if (alreadyRun['coppermine-nov15']) return;
+  const fix = { date: "2026-11-15", fieldName: "Coppermine Norris Field #1",
+                address: "5602 Cottonworth Ave, Baltimore, MD 21209", kickoff: "5:00 PM" };
+  const text = "Coppermine Norris Field #1 (5602 Cottonworth Ave, Baltimore, MD 21209) · 5:00 PM";
+  for (const [node, id, textKey] of [['stats', 'fa26-16', 'notes'], ['journal', 'faj26-16', 'location']]) {
+    const rows = fbSnapToArray(await readOnce(dataRef(node)));
+    let changed = 0;
+    const next = rows.map(r => {
+      if (r.id !== id || r.date !== "2026-11-14") return r;
+      changed += 1;
+      return { ...r, ...fix, [textKey]: text };
+    });
+    if (changed > 0) await dataRef(node).set(arrayToFbObj(next));
+  }
+  await seedRef('coppermine-nov15').set(true);
+}
+
 export async function runSeedsIfNeeded() {
   const alreadyRun = (await readOnce(db.ref(`${ROOT}/seeds`))).val() || {};
   for (const b of SEED_BATCHES) {
@@ -166,4 +189,5 @@ export async function runSeedsIfNeeded() {
   await migrateMoments(alreadyRun);
   await splitVenueFields(alreadyRun);
   await consolidateCoaching(alreadyRun);
+  await moveCoppermineNov(alreadyRun);
 }

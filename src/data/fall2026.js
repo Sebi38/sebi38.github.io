@@ -25,7 +25,7 @@ export const FALL26_STATS = [
   {id:"fa26-13",date:"2026-10-25",opponent:"PDA 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM",fieldName:"Witter Field",address:"2700 Witter Dr, Alexandria, VA 22314",kickoff:"2:00 PM",tag:""},
   {id:"fa26-14",date:"2026-11-01",opponent:"Baltimore Armour 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM",fieldName:"Witter Field",address:"2700 Witter Dr, Alexandria, VA 22314",kickoff:"12:00 PM",tag:""},
   {id:"fa26-15",date:"2026-11-08",opponent:"Sporting Athletic 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Chase Fields · 12:00 PM",fieldName:"Chase Fields",address:"",kickoff:"12:00 PM",tag:""},
-  {id:"fa26-16",date:"2026-11-14",opponent:"Coppermine 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"St Paul's School · 12:00 PM",fieldName:"St Paul's School",address:"",kickoff:"12:00 PM",tag:""},
+  {id:"fa26-16",date:"2026-11-15",opponent:"Coppermine 2013 HG",position:"CB",minutes:0,goals:0,assists:0,shots:0,sot:0,passes:0,tackles:0,result:"—",notes:"Coppermine Norris Field #1 (5602 Cottonworth Ave, Baltimore, MD 21209) · 5:00 PM",fieldName:"Coppermine Norris Field #1",address:"5602 Cottonworth Ave, Baltimore, MD 21209",kickoff:"5:00 PM",tag:""},
 ];
 
 export const FALL26_JOURNAL = [
@@ -44,7 +44,7 @@ export const FALL26_JOURNAL = [
   {id:"faj26-13",date:"2026-10-25",opponent:"PDA 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 2:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-13",fieldName:"Witter Field",address:"2700 Witter Dr, Alexandria, VA 22314",kickoff:"2:00 PM",tag:""},
   {id:"faj26-14",date:"2026-11-01",opponent:"Baltimore Armour 2013 HG",location:"2700 Witter Dr, Alexandria, VA 22314 · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-14",fieldName:"Witter Field",address:"2700 Witter Dr, Alexandria, VA 22314",kickoff:"12:00 PM",tag:""},
   {id:"faj26-15",date:"2026-11-08",opponent:"Sporting Athletic 2013 HG",location:"Chase Fields · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-15",fieldName:"Chase Fields",address:"",kickoff:"12:00 PM",tag:""},
-  {id:"faj26-16",date:"2026-11-14",opponent:"Coppermine 2013 HG",location:"St Paul's School · 12:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-16",fieldName:"St Paul's School",address:"",kickoff:"12:00 PM",tag:""},
+  {id:"faj26-16",date:"2026-11-15",opponent:"Coppermine 2013 HG",location:"Coppermine Norris Field #1 (5602 Cottonworth Ave, Baltimore, MD 21209) · 5:00 PM",surface:"grass",position:"CB",wentWell:"",toImprove:"",rating:5,freeform:"",statId:"fa26-16",fieldName:"Coppermine Norris Field #1",address:"5602 Cottonworth Ave, Baltimore, MD 21209",kickoff:"5:00 PM",tag:""},
 ];
 
 // Thanksgiving-weekend tournament, 21–22 Nov 2026. Added after the batches
