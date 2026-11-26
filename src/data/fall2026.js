@@ -73,3 +73,29 @@ export const FALL26_NOV_JOURNAL = nov.map(([n, date, opponent, v, kickoff]) => (
   position: "CB", wentWell: "", toImprove: "", rating: 5, freeform: "", statId: `fa26-${n}`,
   fieldName: v.fieldName, address: v.address, kickoff, tag: "",
 }));
+
+// MLS NEXT trip to Arizona, 8–9 Dec 2026. Added after the batches above had
+// been seeded, so these go in under their own seed key ("fall26-dec").
+// Source: TeamSnap "New game" emails of 24 Nov. Times are Arizona time and are
+// TeamSnap's arrival times; the Wednesday email gave no time zone, so 2:40 PM
+// is assumed to be Arizona time like the other two. TeamSnap gave field names
+// only, so addresses are left blank rather than guessed.
+const SCOTTSDALE = { fieldName: "Scottsdale Sports Complex", address: "" };
+const REATA = { fieldName: "Reata Sports Complex", address: "" };
+const dec = [
+  ["21", "2026-12-08", "Weston FC",               SCOTTSDALE, "10:40 AM"],
+  ["22", "2026-12-08", "Inter Atlanta FC",        REATA,      "6:40 PM"],
+  ["23", "2026-12-09", "Los Angeles Sports Club", SCOTTSDALE, "2:40 PM"],
+];
+
+export const FALL26_DEC_STATS = dec.map(([n, date, opponent, v, kickoff]) => ({
+  id: `fa26-${n}`, date, opponent, position: "CB", minutes: 0, goals: 0, assists: 0, shots: 0,
+  sot: 0, passes: 0, tackles: 0, result: "—", notes: novNotes(v, kickoff),
+  fieldName: v.fieldName, address: v.address, kickoff, tag: "",
+}));
+
+export const FALL26_DEC_JOURNAL = dec.map(([n, date, opponent, v, kickoff]) => ({
+  id: `faj26-${n}`, date, opponent, location: novNotes(v, kickoff), surface: "grass",
+  position: "CB", wentWell: "", toImprove: "", rating: 5, freeform: "", statId: `fa26-${n}`,
+  fieldName: v.fieldName, address: v.address, kickoff, tag: "",
+}));
